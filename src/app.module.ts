@@ -1,13 +1,4 @@
 import { Module } from '@nestjs/common';
-<<<<<<< HEAD
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-
-@Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
-=======
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -58,6 +49,5 @@ import * as path from 'path';
     StudentCardModule,
     UsersModule,
   ],
->>>>>>> backup-local
 })
 export class AppModule {}
