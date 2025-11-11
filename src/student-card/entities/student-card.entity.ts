@@ -19,8 +19,15 @@ export class StudentCard {
     ttl?: string;
     gender?: string;
     kelas?: string;
+    jurusan?: string;
     [key: string]: any;
   };
+
+  @Column({ nullable: true })
+  kelas?: string;
+
+  @Column({ nullable: true })
+  jurusan?: string;
 
   @CreateDateColumn()
   upload_date: Date;

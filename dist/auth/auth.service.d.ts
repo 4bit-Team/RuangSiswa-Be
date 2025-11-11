@@ -9,6 +9,7 @@ export declare class AuthService {
     private readonly jwtService;
     private readonly cardService;
     private readonly cardValidator;
+    getUsersService(): UsersService;
     constructor(usersService: UsersService, jwtService: JwtService, cardService: StudentCardService, cardValidator: StudentCardValidationService);
     register(registerDto: RegisterDto, filePath?: string): Promise<{
         message: string;
@@ -16,9 +17,17 @@ export declare class AuthService {
         studentCard: {
             nama: string;
             nis: string;
+            nisn: string;
             ttl: string;
             gender: string;
             kelas: string;
+            jurusan: string;
+            raw_lines: string[];
+            validasi: {
+                kelas: boolean | "";
+                jurusan: boolean | "";
+                status: string;
+            };
         };
     } | {
         message: string;
@@ -26,13 +35,15 @@ export declare class AuthService {
         studentCard?: undefined;
     }>;
     login(loginDto: LoginDto): Promise<{
-        message: string;
-        access_token: string;
-        user: {
-            id: number;
-            email: string;
-            role: import("../users/entities/user.entity").UserRole;
-            status: import("../users/entities/user.entity").UserStatus;
-        };
+        token: string;
+        id: number;
+        username: string;
+        email: string;
+        role: import("../users/entities/user.entity").UserRole;
+        status: import("../users/entities/user.entity").UserStatus;
+        kartu_pelajar_file: string;
+        kelas: import("../kelas/entities/kelas.entity").Kelas;
+        jurusan: import("../jurusan/entities/jurusan.entity").Jurusan;
+        studentCards: import("../student-card/entities/student-card.entity").StudentCard[];
     }>;
 }

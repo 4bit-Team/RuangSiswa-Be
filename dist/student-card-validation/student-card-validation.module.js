@@ -9,13 +9,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentCardValidationModule = void 0;
 const common_1 = require("@nestjs/common");
 const student_card_validation_service_1 = require("./student-card-validation.service");
-const student_card_module_1 = require("../student-card/student-card.module");
 let StudentCardValidationModule = class StudentCardValidationModule {
 };
 exports.StudentCardValidationModule = StudentCardValidationModule;
 exports.StudentCardValidationModule = StudentCardValidationModule = __decorate([
     (0, common_1.Module)({
-        imports: [student_card_module_1.StudentCardModule],
         providers: [student_card_validation_service_1.StudentCardValidationService],
         exports: [student_card_validation_service_1.StudentCardValidationService],
     })

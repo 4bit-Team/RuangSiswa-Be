@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
 const register_dto_1 = require("./dto/register.dto");
 const login_dto_1 = require("./dto/login.dto");
+const jwt_auth_guard_1 = require("./guard/jwt-auth.guard");
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -25,8 +26,56 @@ let AuthController = class AuthController {
     async register(dto) {
         return this.authService.register(dto);
     }
-    login(dto) {
-        return this.authService.login(dto);
+    async login(dto, res) {
+        const result = await this.authService.login(dto);
+        res.cookie('access_token', result.token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: '.ruangsiswa.my.id',
+            path: '/',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+        return res.json({
+            message: 'Login berhasil',
+            user: result,
+            token: result.token,
+        });
+    }
+    async logout(res) {
+        res.clearCookie('access_token', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            domain: '.ruangsiswa.my.id',
+            path: '/',
+        });
+        res.clearCookie('auth_profile', {
+            domain: '.ruangsiswa.my.id',
+            path: '/',
+        });
+        return { message: 'Logout berhasil' };
+    }
+    async getProfile(req) {
+        const userService = this.authService.getUsersService();
+        let user = null;
+        const jwtUser = req.user;
+        if (jwtUser && typeof jwtUser === 'object') {
+            if (typeof jwtUser.email === 'string' && jwtUser.email) {
+                user = await userService.findOneByEmail(jwtUser.email);
+            }
+            else if (typeof jwtUser.id === 'number' && jwtUser.id) {
+                user = await userService.findOne(jwtUser.id);
+            }
+        }
+        if (!user) {
+            return { error: 'User not found' };
+        }
+        if (typeof user === 'object' && user !== null && 'password' in user) {
+            const { password, ...profile } = user;
+            return profile;
+        }
+        return user;
     }
 };
 exports.AuthController = AuthController;
@@ -40,10 +89,26 @@ __decorate([
 __decorate([
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [login_dto_1.LoginDto, Object]),
+    __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
+__decorate([
+    (0, common_1.Post)('logout'),
+    __param(0, (0, common_1.Res)({ passthrough: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "logout", null);
+__decorate([
+    (0, common_1.Get)('me'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "getProfile", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])

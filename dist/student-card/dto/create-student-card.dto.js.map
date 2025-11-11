@@ -1,1 +1,1 @@
-{"version":3,"file":"create-student-card.dto.js","sourceRoot":"","sources":["../../../src/student-card/dto/create-student-card.dto.ts"],"names":[],"mappings":";;;AAAA,MAAa,oBAAoB;IAC/B,MAAM,CAAS;IACf,SAAS,CAAS;IAClB,cAAc,CAOZ;CACH;AAXD,oDAWC"}
+{"version":3,"file":"create-student-card.dto.js","sourceRoot":"","sources":["../../../src/student-card/dto/create-student-card.dto.ts"],"names":[],"mappings":";;;AAAA,MAAa,oBAAoB;IAC/B,MAAM,CAAS;IACf,SAAS,CAAS;IAClB,KAAK,CAAU;IACf,OAAO,CAAU;IACjB,cAAc,CAQZ;CACH;AAdD,oDAcC"}

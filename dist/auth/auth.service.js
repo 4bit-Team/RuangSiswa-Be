@@ -54,6 +54,9 @@ let AuthService = class AuthService {
     jwtService;
     cardService;
     cardValidator;
+    getUsersService() {
+        return this.usersService;
+    }
     constructor(usersService, jwtService, cardService, cardValidator) {
         this.usersService = usersService;
         this.jwtService = jwtService;
@@ -68,6 +71,9 @@ let AuthService = class AuthService {
             password: hashedPassword,
             role: 'siswa',
             status: 'nonaktif',
+            kartu_pelajar_file: filePath || undefined,
+            kelas_id: registerDto.kelas_id,
+            jurusan_id: registerDto.jurusan_id,
         });
         if (filePath) {
             const extractedData = await this.cardValidator.validate(filePath);
@@ -88,24 +94,35 @@ let AuthService = class AuthService {
         };
     }
     async login(loginDto) {
-        const user = await this.usersService.findOneByEmail(loginDto.email);
-        if (!user)
-            throw new common_1.UnauthorizedException('Email atau password salah.');
-        const match = await bcrypt.compare(loginDto.password, user.password);
-        if (!match)
-            throw new common_1.UnauthorizedException('Email atau password salah.');
-        const payload = { id: user.id, email: user.email, role: user.role };
-        const token = this.jwtService.sign(payload);
-        return {
-            message: 'Login berhasil',
-            access_token: token,
-            user: {
-                id: user.id,
+        try {
+            const user = await this.usersService.findOneByEmail(loginDto.email);
+            if (!user) {
+                console.error('[LOGIN ERROR] User not found for email:', loginDto.email);
+                throw new common_1.BadRequestException('Akun tidak ditemukan');
+            }
+            const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+            if (!isPasswordValid) {
+                console.error('[LOGIN ERROR] Invalid password for email:', loginDto.email);
+                throw new common_1.BadRequestException('Password yang dimasukkan salah');
+            }
+            const payload = {
+                sub: user.id,
+                username: user.username,
                 email: user.email,
                 role: user.role,
-                status: user.status,
-            },
-        };
+                kelas: user.kelas?.nama,
+                jurusan: user.jurusan?.nama,
+            };
+            const token = this.jwtService.sign(payload);
+            const { password, ...result } = user;
+            console.log('[LOGIN SUCCESS] User:', result);
+            console.log('[LOGIN SUCCESS] Role:', result.role);
+            return { ...result, token };
+        }
+        catch (err) {
+            console.error('[LOGIN ERROR]', err);
+            throw err;
+        }
     }
 };
 exports.AuthService = AuthService;

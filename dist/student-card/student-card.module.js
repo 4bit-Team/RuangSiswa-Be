@@ -13,7 +13,9 @@ const student_card_service_1 = require("./student-card.service");
 const student_card_controller_1 = require("./student-card.controller");
 const student_card_entity_1 = require("./entities/student-card.entity");
 const users_module_1 = require("../users/users.module");
-const student_card_validation_service_1 = require("../student-card-validation/student-card-validation.service");
+const kelas_module_1 = require("../kelas/kelas.module");
+const jurusan_module_1 = require("../jurusan/jurusan.module");
+const student_card_validation_module_1 = require("../student-card-validation/student-card-validation.module");
 let StudentCardModule = class StudentCardModule {
 };
 exports.StudentCardModule = StudentCardModule;
@@ -22,9 +24,12 @@ exports.StudentCardModule = StudentCardModule = __decorate([
         imports: [
             typeorm_1.TypeOrmModule.forFeature([student_card_entity_1.StudentCard]),
             users_module_1.UsersModule,
+            kelas_module_1.KelasModule,
+            jurusan_module_1.JurusanModule,
+            student_card_validation_module_1.StudentCardValidationModule,
         ],
         controllers: [student_card_controller_1.StudentCardController],
-        providers: [student_card_service_1.StudentCardService, student_card_validation_service_1.StudentCardValidationService],
+        providers: [student_card_service_1.StudentCardService],
         exports: [student_card_service_1.StudentCardService],
     })
 ], StudentCardModule);

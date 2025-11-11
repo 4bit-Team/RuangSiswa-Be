@@ -12,6 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const typeorm_1 = require("typeorm");
 const student_card_entity_1 = require("../../student-card/entities/student-card.entity");
+const kelas_entity_1 = require("../../kelas/entities/kelas.entity");
+const jurusan_entity_1 = require("../../jurusan/entities/jurusan.entity");
 let User = class User {
     id;
     username;
@@ -20,6 +22,8 @@ let User = class User {
     role;
     status;
     kartu_pelajar_file;
+    kelas;
+    jurusan;
     studentCards;
 };
 exports.User = User;
@@ -51,6 +55,16 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "kartu_pelajar_file", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => kelas_entity_1.Kelas, (kelas) => kelas.users, { nullable: true }),
+    (0, typeorm_1.JoinColumn)({ name: 'kelas_id' }),
+    __metadata("design:type", kelas_entity_1.Kelas)
+], User.prototype, "kelas", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => jurusan_entity_1.Jurusan, (jurusan) => jurusan.users, { nullable: true }),
+    (0, typeorm_1.JoinColumn)({ name: 'jurusan_id' }),
+    __metadata("design:type", jurusan_entity_1.Jurusan)
+], User.prototype, "jurusan", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => student_card_entity_1.StudentCard, card => card.user),
     __metadata("design:type", Array)

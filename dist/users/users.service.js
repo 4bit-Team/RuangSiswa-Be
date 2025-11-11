@@ -24,6 +24,12 @@ let UsersService = class UsersService {
     }
     async create(createUserDto) {
         const user = this.userRepo.create(createUserDto);
+        if (createUserDto.kelas_id) {
+            user.kelas = { id: createUserDto.kelas_id };
+        }
+        if (createUserDto.jurusan_id) {
+            user.jurusan = { id: createUserDto.jurusan_id };
+        }
         return this.userRepo.save(user);
     }
     findAll() {
@@ -32,9 +38,30 @@ let UsersService = class UsersService {
     findOne(id) {
         return this.userRepo.findOne({ where: { id } });
     }
+    async updateStatus(id, status) {
+        await this.userRepo
+            .createQueryBuilder()
+            .update(user_entity_1.User)
+            .set({ status: status })
+            .where('id = :id', { id })
+            .execute();
+        const updatedUser = await this.findOne(id);
+        if (!updatedUser)
+            throw new Error('User not found after update');
+        return updatedUser;
+    }
     async update(id, updateUserDto) {
-        await this.userRepo.update(id, updateUserDto);
-        return this.findOne(id);
+        const user = await this.findOne(id);
+        if (!user)
+            return null;
+        if (updateUserDto.kelas_id) {
+            user.kelas = { id: updateUserDto.kelas_id };
+        }
+        if (updateUserDto.jurusan_id) {
+            user.jurusan = { id: updateUserDto.jurusan_id };
+        }
+        Object.assign(user, updateUserDto);
+        return this.userRepo.save(user);
     }
     async remove(id) {
         const user = await this.findOne(id);
@@ -43,7 +70,10 @@ let UsersService = class UsersService {
         return this.userRepo.remove(user);
     }
     findOneByEmail(email) {
-        return this.userRepo.findOne({ where: { email } });
+        return this.userRepo.findOne({
+            where: { email },
+            relations: ['kelas', 'jurusan'],
+        });
     }
 };
 exports.UsersService = UsersService;

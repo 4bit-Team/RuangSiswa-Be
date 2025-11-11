@@ -4,6 +4,8 @@ exports.CreateStudentCardDto = void 0;
 class CreateStudentCardDto {
     userId;
     file_path;
+    kelas;
+    jurusan;
     extracted_data;
 }
 exports.CreateStudentCardDto = CreateStudentCardDto;

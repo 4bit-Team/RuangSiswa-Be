@@ -20,27 +20,54 @@ const path_1 = require("path");
 const student_card_service_1 = require("./student-card.service");
 const create_student_card_dto_1 = require("./dto/create-student-card.dto");
 const update_student_card_dto_1 = require("./dto/update-student-card.dto");
+const users_service_1 = require("../users/users.service");
+const kelas_service_1 = require("../kelas/kelas.service");
+const jurusan_service_1 = require("../jurusan/jurusan.service");
 const student_card_validation_service_1 = require("../student-card-validation/student-card-validation.service");
 let StudentCardController = class StudentCardController {
     cardService;
     cardValidator;
-    constructor(cardService, cardValidator) {
+    usersService;
+    kelasService;
+    jurusanService;
+    constructor(cardService, cardValidator, usersService, kelasService, jurusanService) {
         this.cardService = cardService;
         this.cardValidator = cardValidator;
+        this.usersService = usersService;
+        this.kelasService = kelasService;
+        this.jurusanService = jurusanService;
     }
-    async uploadCard(file, userId) {
+    async uploadCard(file, userId, kelasId, jurusanId) {
         if (!file)
             throw new common_1.BadRequestException('File kartu pelajar wajib diunggah');
         if (!userId)
             throw new common_1.BadRequestException('userId wajib dikirim');
-        const extractedData = await this.cardValidator.validate(file.path);
+        if (!kelasId)
+            throw new common_1.BadRequestException('kelas wajib dikirim');
+        if (!jurusanId)
+            throw new common_1.BadRequestException('jurusan wajib dikirim');
+        const kelasData = await this.kelasService.findOne(kelasId);
+        const jurusanData = await this.jurusanService.findOne(jurusanId);
+        if (!kelasData || !jurusanData) {
+            throw new common_1.BadRequestException('Kelas atau jurusan tidak ditemukan di database');
+        }
+        const extractedData = await this.cardValidator.validate(file.path, kelasData.nama, jurusanData.kode);
+        if (!extractedData.validasi?.kelas || !extractedData.validasi?.jurusan) {
+            return {
+                message: '❌ Kelas/jurusan pada kartu pelajar tidak sesuai dengan data registrasi. Mohon upload ulang.',
+                file: file.filename,
+                extractedData,
+                card: null,
+            };
+        }
         const card = await this.cardService.create({
             userId,
             file_path: file.path,
             extracted_data: extractedData,
         });
+        await this.usersService.updateStatus(userId, 'aktif');
         return {
-            message: '✅ Kartu pelajar berhasil diunggah dan diproses',
+            message: 'Kartu pelajar berhasil diunggah dan diproses',
             file: file.filename,
             extractedData,
             card,
@@ -84,8 +111,10 @@ __decorate([
     })),
     __param(0, (0, common_1.UploadedFile)()),
     __param(1, (0, common_1.Body)('userId')),
+    __param(2, (0, common_1.Body)('kelas')),
+    __param(3, (0, common_1.Body)('jurusan')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Number]),
+    __metadata("design:paramtypes", [Object, Number, Number, Number]),
     __metadata("design:returntype", Promise)
 ], StudentCardController.prototype, "uploadCard", null);
 __decorate([
@@ -126,6 +155,9 @@ __decorate([
 exports.StudentCardController = StudentCardController = __decorate([
     (0, common_1.Controller)('student-card'),
     __metadata("design:paramtypes", [student_card_service_1.StudentCardService,
-        student_card_validation_service_1.StudentCardValidationService])
+        student_card_validation_service_1.StudentCardValidationService,
+        users_service_1.UsersService,
+        kelas_service_1.KelasService,
+        jurusan_service_1.JurusanService])
 ], StudentCardController);
 //# sourceMappingURL=student-card.controller.js.map

@@ -1,18 +1,25 @@
 import * as dotenv from 'dotenv';
-dotenv.config(); // ✅ Load .env before anything else
+dotenv.config();
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(cookieParser());
 
-  // ✅ Prefix semua route dengan /api
+
   app.setGlobalPrefix('api');
 
-  // ✅ Allow all origins supaya frontend bebas request
+
   app.enableCors({
-    origin: '*',
+    origin: [
+      'http://localhost:3000',
+      'https://ruangsiswa.my.id',
+      'http://ruangsiswa.my.id',
+      'https://be.ruangsiswa.my.id',
+    ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

@@ -9,7 +9,10 @@ export declare class StudentCard {
         ttl?: string;
         gender?: string;
         kelas?: string;
+        jurusan?: string;
         [key: string]: any;
     };
+    kelas?: string;
+    jurusan?: string;
     upload_date: Date;
 }

@@ -4,7 +4,10 @@ import { MulterModule } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { AuthModule } from './auth/auth.module';
 import { StudentCardModule } from './student-card/student-card.module';
+import { KelasModule } from './kelas/kelas.module';
+import { JurusanModule } from './jurusan/jurusan.module';
 import { UsersModule } from './users/users.module';
+import { LoggerModule } from './logger/logger.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -45,9 +48,12 @@ import * as path from 'path';
       },
     }),
 
-    AuthModule,
-    StudentCardModule,
-    UsersModule,
+  AuthModule,
+  StudentCardModule,
+  UsersModule,
+  LoggerModule,
+  KelasModule,
+  JurusanModule
   ],
 })
 export class AppModule {}

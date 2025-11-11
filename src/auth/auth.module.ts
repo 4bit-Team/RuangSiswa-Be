@@ -5,15 +5,18 @@ import { UsersModule } from '../users/users.module';
 import { StudentCardModule } from '../student-card/student-card.module';
 import { StudentCardValidationModule } from '../student-card-validation/student-card-validation.module';
 import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './strategy/jwt.strategy';
 
 @Module({
   imports: [
     UsersModule,
     StudentCardModule,
-    StudentCardValidationModule, // ✅ tambahkan ini
-    JwtModule.register({ secret: 'SECRET_KEY', signOptions: { expiresIn: '1h' } }),
+    StudentCardValidationModule,
+    PassportModule,
+    JwtModule.register({ secret: process.env.JWT_SECRET || 'your_jwt_secret', signOptions: { expiresIn: '7d' } }),
   ],
-  providers: [AuthService],
+  providers: [AuthService, JwtStrategy],
   controllers: [AuthController],
 })
 export class AuthModule {}

@@ -46,7 +46,10 @@ const platform_express_1 = require("@nestjs/platform-express");
 const multer_1 = require("multer");
 const auth_module_1 = require("./auth/auth.module");
 const student_card_module_1 = require("./student-card/student-card.module");
+const kelas_module_1 = require("./kelas/kelas.module");
+const jurusan_module_1 = require("./jurusan/jurusan.module");
 const users_module_1 = require("./users/users.module");
+const logger_module_1 = require("./logger/logger.module");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 let AppModule = class AppModule {
@@ -91,6 +94,9 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             student_card_module_1.StudentCardModule,
             users_module_1.UsersModule,
+            logger_module_1.LoggerModule,
+            kelas_module_1.KelasModule,
+            jurusan_module_1.JurusanModule
         ],
     })
 ], AppModule);

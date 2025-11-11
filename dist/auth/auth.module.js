@@ -14,6 +14,8 @@ const users_module_1 = require("../users/users.module");
 const student_card_module_1 = require("../student-card/student-card.module");
 const student_card_validation_module_1 = require("../student-card-validation/student-card-validation.module");
 const jwt_1 = require("@nestjs/jwt");
+const passport_1 = require("@nestjs/passport");
+const jwt_strategy_1 = require("./strategy/jwt.strategy");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -23,9 +25,10 @@ exports.AuthModule = AuthModule = __decorate([
             users_module_1.UsersModule,
             student_card_module_1.StudentCardModule,
             student_card_validation_module_1.StudentCardValidationModule,
-            jwt_1.JwtModule.register({ secret: 'SECRET_KEY', signOptions: { expiresIn: '1h' } }),
+            passport_1.PassportModule,
+            jwt_1.JwtModule.register({ secret: process.env.JWT_SECRET || 'your_jwt_secret', signOptions: { expiresIn: '7d' } }),
         ],
-        providers: [auth_service_1.AuthService],
+        providers: [auth_service_1.AuthService, jwt_strategy_1.JwtStrategy],
         controllers: [auth_controller_1.AuthController],
     })
 ], AuthModule);

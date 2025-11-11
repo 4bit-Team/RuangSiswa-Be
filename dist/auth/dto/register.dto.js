@@ -6,6 +6,8 @@ class RegisterDto {
     email;
     password;
     kartu_pelajar_file;
+    kelas_id;
+    jurusan_id;
 }
 exports.RegisterDto = RegisterDto;
 //# sourceMappingURL=register.dto.js.map

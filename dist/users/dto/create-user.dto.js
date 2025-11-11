@@ -9,6 +9,8 @@ class CreateUserDto {
     status;
     kartu_pelajar_file;
     isVerified;
+    kelas_id;
+    jurusan_id;
 }
 exports.CreateUserDto = CreateUserDto;
 //# sourceMappingURL=create-user.dto.js.map

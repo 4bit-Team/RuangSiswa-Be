@@ -17,6 +17,8 @@ let StudentCard = class StudentCard {
     user;
     file_path;
     extracted_data;
+    kelas;
+    jurusan;
     upload_date;
 };
 exports.StudentCard = StudentCard;
@@ -36,6 +38,14 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'json', nullable: true }),
     __metadata("design:type", Object)
 ], StudentCard.prototype, "extracted_data", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], StudentCard.prototype, "kelas", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], StudentCard.prototype, "jurusan", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
