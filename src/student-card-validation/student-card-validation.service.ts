@@ -217,53 +217,70 @@ export class StudentCardValidationService {
         .replace(/(\d{2}):(\d{2}):(\d{4})/, '$1-$2-$3')
         .trim();
 
-      // Gender parsing
+      // ====== GENDER PARSING FIX ======
       let genderValue = '';
-      const genderCandidates = upperLines.filter(l => /L\/P|L P|L\/|\/P|^L$|^P$/.test(l));
+      const genderCandidates = upperLines.filter(l => /(L\/P|L P|L\/|\/P|L:|P:|L$|P$)/i.test(l));
+
       if (genderCandidates.length) {
         for (const cand of genderCandidates) {
-          const m = cand.match(/[LP]/i);
-          if (m) {
-            genderValue = m[0].toUpperCase();
+          const cleanCand = cand.replace(/[^A-Z]/g, '').trim(); // buang simbol
+          if (/\bP\b/.test(cleanCand) || cleanCand.endsWith('P')) {
+            genderValue = 'P';
+            break;
+          }
+          if (/\bL\b/.test(cleanCand) || cleanCand.endsWith('L')) {
+            genderValue = 'L';
             break;
           }
         }
       }
 
-      // Kelas dan jurusan
-      const jurusanList = ['DKV','TKP','DPIB','RPL','SIJA','TKJ','TP','TOI','TKR','TFLM'];
+      // fallback terakhir: cari baris "L/P : <huruf>"
+      if (!genderValue) {
+        const m = text.match(/L\/P\s*[:\-]?\s*([LP])/i);
+        if (m) genderValue = m[1].toUpperCase();
+      }
+
+      // ======== KELAS & JURUSAN PARSING FIX ========
+      const jurusanList = ['DKV', 'TKP', 'DPIB', 'RPL', 'SIJA', 'TKJ', 'TP', 'TOI', 'TKR', 'TFLM'];
+
       let kelasValue = '';
       let jurusanValue = '';
+
       const kelasRaw = extractByLabel(['KELAS', 'CLASS']);
       if (kelasRaw) {
-        let k = kelasRaw.toUpperCase().replace(/O/g, '0').replace(/\s+/g, '');
-        k = k.replace(/(XIII|XII|XI|X)([A-Z]+)/, '$1 $2');
-        k = k.replace(/([A-Z]+)(\d+)/, '$1 $2');
-        k = k.trim();
+        // Normalisasi awal
+        let k = kelasRaw.toUpperCase()
+          .replace(/O/g, '0')
+          .replace(/\s+/g, ' ')
+          .trim();
 
+        // Misalnya: "XII SUA 2" → hapus underscore atau karakter aneh
+        k = k.replace(/[^A-Z0-9 ]/g, '').replace(/\s{2,}/g, ' ');
+
+        // Ambil tingkat (X, XI, XII, XIII)
         const tingkatMatch = k.match(/\b(XIII|XII|XI|X)\b/);
         const tingkat = tingkatMatch ? tingkatMatch[0] : '';
 
-        let foundJurusan = '';
+        // Bersihkan sisanya untuk deteksi jurusan
+        const afterTingkat = k.replace(/\b(XIII|XII|XI|X)\b/, '').trim();
+
+        // Cari jurusan yang paling mirip
+        let bestMatch = { jur: '', sim: 0 };
         for (const j of jurusanList) {
-          if (k.includes(j)) {
-            foundJurusan = j;
-            break;
-          }
+          const sim = similarity(afterTingkat, j);
+          if (sim > bestMatch.sim) bestMatch = { jur: j, sim };
         }
 
-        if (!foundJurusan) {
-          let best = { j: '', d: 999 };
-          for (const j of jurusanList) {
-            const d = levenshtein(k.replace(/[^A-Z]/g,''), j);
-            if (d < best.d) { best = { j, d }; }
-          }
-          if (best.d <= 3) foundJurusan = best.j;
-        }
+        // Ambil jurusan dengan similarity minimal 0.4 (lebih toleran)
+        const jurusanDetected = bestMatch.sim >= 0.4 ? bestMatch.jur : '';
 
-        jurusanValue = foundJurusan;
-        const nomor = (k.match(/\d+/) || ['']).pop();
-        kelasValue = [tingkat, jurusanValue, nomor].filter(Boolean).join(' ').trim();
+        // Ambil nomor kelas (misal "2" dari "XII SIJA 2")
+        const nomorMatch = k.match(/\b\d{1,2}\b/);
+        const nomor = nomorMatch ? nomorMatch[0] : '';
+
+        jurusanValue = jurusanDetected;
+        kelasValue = [tingkat, jurusanDetected, nomor].filter(Boolean).join(' ').trim();
         if (!kelasValue) kelasValue = k;
       }
 
