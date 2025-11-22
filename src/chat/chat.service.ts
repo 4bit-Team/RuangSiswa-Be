@@ -46,14 +46,20 @@ export class ChatService {
       conversation = this.conversationRepository.create({
         senderId,
         receiverId,
-        subject: subject || null,
+        subject: subject || undefined,
         isActive: true,
       });
       await this.conversationRepository.save(conversation);
-      conversation = await this.conversationRepository.findOne({
+      const savedConversation = await this.conversationRepository.findOne({
         where: { id: conversation.id },
         relations: ['sender', 'receiver'],
       });
+
+      if (!savedConversation) {
+        throw new NotFoundException('Failed to create conversation');
+      }
+
+      conversation = savedConversation;
     }
 
     return conversation;
@@ -185,9 +191,9 @@ export class ChatService {
       receiverId,
       content,
       messageType,
-      fileUrl: fileUrl || null,
-      fileName: fileName || null,
-      fileSize: fileSize || null,
+      ...(fileUrl && { fileUrl }),
+      ...(fileName && { fileName }),
+      ...(fileSize && { fileSize }),
     });
 
     await this.messageRepository.save(message);
@@ -207,10 +213,16 @@ export class ChatService {
       { lastMessageId: message.id, lastMessageAt: new Date() },
     );
 
-    return await this.messageRepository.findOne({
+    const savedMessage = await this.messageRepository.findOne({
       where: { id: message.id },
       relations: ['sender', 'receiver', 'readStatuses'],
     });
+
+    if (!savedMessage) {
+      throw new NotFoundException('Failed to retrieve saved message');
+    }
+
+    return savedMessage;
   }
 
   /**
@@ -246,10 +258,16 @@ export class ChatService {
       },
     );
 
-    return await this.messageRepository.findOne({
+    const updatedMessage = await this.messageRepository.findOne({
       where: { id: messageId },
       relations: ['sender', 'receiver', 'readStatuses'],
     });
+
+    if (!updatedMessage) {
+      throw new NotFoundException('Failed to retrieve updated message');
+    }
+
+    return updatedMessage;
   }
 
   /**
@@ -302,9 +320,15 @@ export class ChatService {
       },
     );
 
-    return await this.messageReadStatusRepository.findOne({
+    const updatedReadStatus = await this.messageReadStatusRepository.findOne({
       where: { id: readStatus.id },
     });
+
+    if (!updatedReadStatus) {
+      throw new NotFoundException('Failed to retrieve updated read status');
+    }
+
+    return updatedReadStatus;
   }
 
   /**
@@ -325,17 +349,17 @@ export class ChatService {
 
     const messageIds = unreadMessages.map((m) => m.id);
 
-    await this.messageReadStatusRepository.update(
-      {
-        messageId: messageIds as any,
-        userId,
-        isRead: false,
-      },
-      {
+    await this.messageReadStatusRepository
+      .createQueryBuilder()
+      .update()
+      .set({
         isRead: true,
         readAt: new Date(),
-      },
-    );
+      })
+      .where('messageId IN (:...messageIds)', { messageIds })
+      .andWhere('userId = :userId', { userId })
+      .andWhere('isRead = :isRead', { isRead: false })
+      .execute();
   }
 
   /**

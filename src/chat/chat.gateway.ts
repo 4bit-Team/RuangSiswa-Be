@@ -19,7 +19,7 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 interface AuthenticatedSocket extends Socket {
-  userId?: number;
+  userId: number;
 }
 
 @WebSocketGateway({
@@ -94,17 +94,15 @@ export class ChatGateway
    * Handle client disconnection
    */
   handleDisconnect(client: AuthenticatedSocket) {
-    if (client.userId) {
-      this.onlineUsers.delete(client.userId);
+    this.onlineUsers.delete(client.userId);
 
-      // Notify all clients about user going offline
-      this.server.emit('user-offline', {
-        userId: client.userId,
-        timestamp: new Date(),
-      });
+    // Notify all clients about user going offline
+    this.server.emit('user-offline', {
+      userId: client.userId,
+      timestamp: new Date(),
+    });
 
-      console.log(`[WebSocket] User ${client.userId} disconnected`);
-    }
+    console.log(`[WebSocket] User ${client.userId} disconnected`);
   }
 
   /**
@@ -404,7 +402,7 @@ export class ChatGateway
     @MessageBody() data: CreateCallDto,
   ) {
     try {
-      const call = await this.callService.initiateCall(client.userId!, data);
+      const call = await this.callService.initiateCall(client.userId, data);
 
       // Notify receiver about incoming call
       this.notifyUser(data.receiverId, 'call-incoming', {
@@ -442,7 +440,7 @@ export class ChatGateway
   ) {
     try {
       const call = await this.callService.saveCallerOffer(
-        client.userId!,
+        client.userId,
         data.callId,
         data.offer,
       );
@@ -476,7 +474,7 @@ export class ChatGateway
   ) {
     try {
       const call = await this.callService.acceptCall(
-        client.userId!,
+        client.userId,
         data.callId,
         data.answer,
       );
@@ -510,7 +508,7 @@ export class ChatGateway
   ) {
     try {
       const call = await this.callService.rejectCall(
-        client.userId!,
+        client.userId,
         data.callId,
         data.reason,
       );
@@ -543,7 +541,7 @@ export class ChatGateway
   ) {
     try {
       const call = await this.callService.endCall(
-        client.userId!,
+        client.userId,
         data.callId,
         data.duration,
       );
@@ -581,7 +579,7 @@ export class ChatGateway
     @MessageBody() data: IceCandidateDto,
   ) {
     try {
-      const call = await this.callService.addIceCandidate(client.userId!, data);
+      const call = await this.callService.addIceCandidate(client.userId, data);
 
       // Forward ICE candidate to other party
       const otherUserId =
@@ -612,7 +610,7 @@ export class ChatGateway
   ) {
     try {
       const calls = await this.callService.getCallHistory(
-        client.userId!,
+        client.userId,
         data.otherUserId,
         20,
       );
@@ -635,7 +633,7 @@ export class ChatGateway
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
     try {
-      const stats = await this.callService.getCallStats(client.userId!);
+      const stats = await this.callService.getCallStats(client.userId);
 
       return {
         status: 'success',
