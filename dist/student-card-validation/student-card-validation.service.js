@@ -84,18 +84,12 @@ let StudentCardValidationService = class StudentCardValidationService {
                 .linear(1.15, -15)
                 .toFile(dataScanPath);
             const { data: { text: headlineText } } = await Tesseract.recognize(headlineScanPath, 'ind+eng', {
-                logger: (m) => {
-                    if (m.status === 'recognizing text') {
-                        process.stdout.write(`🧠 OCR HEADLINE Progress: ${(m.progress * 100).toFixed(0)}%\r`);
-                    }
-                },
+                logger: (m) => m.status === 'recognizing text' &&
+                    process.stdout.write(`🧠 OCR HEADLINE Progress: ${(m.progress * 100).toFixed(0)}%\r`)
             });
             const { data: { text: dataText } } = await Tesseract.recognize(dataScanPath, 'ind+eng', {
-                logger: (m) => {
-                    if (m.status === 'recognizing text') {
-                        process.stdout.write(`🧠 OCR DATA Progress: ${(m.progress * 100).toFixed(0)}%\r`);
-                    }
-                },
+                logger: (m) => m.status === 'recognizing text' &&
+                    process.stdout.write(`🧠 OCR DATA Progress: ${(m.progress * 100).toFixed(0)}%\r`)
             });
             const text = (headlineText || '') + '\n' + (dataText || '');
             console.log('\n🧾 [OCR Result Raw Text]:\n', text);
@@ -116,9 +110,7 @@ let StudentCardValidationService = class StudentCardValidationService {
                 return matrix[a.length][b.length];
             }
             function normalize(s) {
-                if (!s)
-                    return '';
-                return s
+                return (s || '')
                     .toUpperCase()
                     .replace(/[|]/g, 'I')
                     .replace(/[‘’´`]/g, "'")
@@ -137,23 +129,20 @@ let StudentCardValidationService = class StudentCardValidationService {
             const keywords = [
                 'SEKOLAH MENENGAH KEJURUAN NEGERI 1 CIBINONG',
                 'SMKN 1 CIBINONG',
-                'JAWA BARAT',
+                'KARTU PELAJAR',
                 'DINAS PENDIDIKAN',
-                'SEKOLAH MENENGAH KEJURUAN',
-                'KARTU PELAJAR'
+                'JAWA BARAT'
             ];
             const allLines = text.split('\n').map(l => l.trim()).filter(Boolean);
-            const topLines = allLines.slice(0, 10).map(l => normalize(l));
+            const topLines = allLines.slice(0, 12).map(l => normalize(l));
             let headlineOk = false;
+            let headlineMatched = '';
             for (const line of topLines) {
                 for (const kw of keywords) {
-                    if (line.includes(normalize(kw).replace(/[^A-Z]/g, ''))) {
-                        headlineOk = true;
-                        break;
-                    }
                     const sim = similarity(line, kw);
-                    if (sim > 0.55) {
+                    if (sim > 0.6 || line.includes(normalize(kw).replace(/[^A-Z]/g, ''))) {
                         headlineOk = true;
+                        headlineMatched = kw;
                         break;
                     }
                 }
@@ -161,14 +150,16 @@ let StudentCardValidationService = class StudentCardValidationService {
                     break;
             }
             if (!headlineOk) {
-                console.warn('⚠️ [OCR] Headline validation gagal, melanjutkan parsing (fallback allowed).');
+                console.error('❌ [OCR] Kartu pelajar bukan dari SMKN 1 Cibinong!');
+                throw new common_1.BadRequestException('❌ Kartu pelajar tidak valid. Hanya kartu dari SMKN 1 CIBINONG yang diterima.');
             }
+            console.log(`✅ [OCR] Validasi sekolah berhasil: ${headlineMatched}`);
             const cleanText = text
                 .replace(/[|]/g, 'I')
                 .replace(/\u00A0/g, ' ')
                 .replace(/\t/g, ' ')
                 .replace(/ +/g, ' ');
-            const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const lines = cleanText.split('\n').map(l => l.trim()).filter(Boolean);
             const upperLines = lines.map(l => normalize(l));
             function extractByLabel(labels) {
                 for (const lbl of labels) {
@@ -205,16 +196,9 @@ let StudentCardValidationService = class StudentCardValidationService {
                     nisn = match[2];
                 }
                 else {
-                    const maybe = lines.join(' ').match(/(\d{8,12})\s*(\/|\s)\s*(\d{8,12})/);
-                    if (maybe) {
-                        nis = maybe[1];
-                        nisn = maybe[3];
-                    }
-                    else {
-                        const single = nisRaw.match(/\d{8,12}/);
-                        if (single)
-                            nis = single[0];
-                    }
+                    const single = nisRaw.match(/\d{8,12}/);
+                    if (single)
+                        nis = single[0];
                 }
             }
             let ttlValue = extractByLabel(['T.T.L', 'TTL', 'T T L', 'T.T L', 'T.T.L.']) || '';
@@ -224,66 +208,54 @@ let StudentCardValidationService = class StudentCardValidationService {
                 .replace(/(\d{2}):(\d{2}):(\d{4})/, '$1-$2-$3')
                 .trim();
             let genderValue = '';
-            const genderCandidates = upperLines.filter(l => /L\/P|L P|L\/|\/P|^L$|^P$/.test(l));
+            const genderCandidates = upperLines.filter(l => /(L\/P|L P|L\/|\/P|L:|P:|L$|P$)/i.test(l));
             if (genderCandidates.length) {
                 for (const cand of genderCandidates) {
-                    const m = cand.match(/[LP]/i);
-                    if (m) {
-                        genderValue = m[0].toUpperCase();
+                    const cleanCand = cand.replace(/[^A-Z]/g, '').trim();
+                    if (/\bP\b/.test(cleanCand) || cleanCand.endsWith('P')) {
+                        genderValue = 'P';
+                        break;
+                    }
+                    if (/\bL\b/.test(cleanCand) || cleanCand.endsWith('L')) {
+                        genderValue = 'L';
                         break;
                     }
                 }
             }
+            if (!genderValue) {
+                const m = text.match(/L\/P\s*[:\-]?\s*([LP])/i);
+                if (m)
+                    genderValue = m[1].toUpperCase();
+            }
             const jurusanList = ['DKV', 'TKP', 'DPIB', 'RPL', 'SIJA', 'TKJ', 'TP', 'TOI', 'TKR', 'TFLM'];
-            let kelasValue = '';
-            let jurusanValue = '';
+            let kelasValue = '', jurusanValue = '';
             const kelasRaw = extractByLabel(['KELAS', 'CLASS']);
             if (kelasRaw) {
-                let k = kelasRaw.toUpperCase().replace(/O/g, '0').replace(/\s+/g, '');
-                k = k.replace(/(XIII|XII|XI|X)([A-Z]+)/, '$1 $2');
-                k = k.replace(/([A-Z]+)(\d+)/, '$1 $2');
-                k = k.trim();
+                let k = kelasRaw.toUpperCase().replace(/O/g, '0').replace(/\s+/g, ' ').trim();
+                k = k.replace(/[^A-Z0-9 ]/g, '').replace(/\s{2,}/g, ' ');
                 const tingkatMatch = k.match(/\b(XIII|XII|XI|X)\b/);
                 const tingkat = tingkatMatch ? tingkatMatch[0] : '';
-                let foundJurusan = '';
+                const afterTingkat = k.replace(/\b(XIII|XII|XI|X)\b/, '').trim();
+                let bestMatch = { jur: '', sim: 0 };
                 for (const j of jurusanList) {
-                    if (k.includes(j)) {
-                        foundJurusan = j;
-                        break;
-                    }
+                    const sim = similarity(afterTingkat, j);
+                    if (sim > bestMatch.sim)
+                        bestMatch = { jur: j, sim };
                 }
-                if (!foundJurusan) {
-                    let best = { j: '', d: 999 };
-                    for (const j of jurusanList) {
-                        const d = levenshtein(k.replace(/[^A-Z]/g, ''), j);
-                        if (d < best.d) {
-                            best = { j, d };
-                        }
-                    }
-                    if (best.d <= 3)
-                        foundJurusan = best.j;
-                }
-                jurusanValue = foundJurusan;
-                const nomor = (k.match(/\d+/) || ['']).pop();
-                kelasValue = [tingkat, jurusanValue, nomor].filter(Boolean).join(' ').trim();
+                const jurusanDetected = bestMatch.sim >= 0.4 ? bestMatch.jur : '';
+                const nomorMatch = k.match(/\b\d{1,2}\b/);
+                const nomor = nomorMatch ? nomorMatch[0] : '';
+                jurusanValue = jurusanDetected;
+                kelasValue = [tingkat, jurusanDetected, nomor].filter(Boolean).join(' ').trim();
                 if (!kelasValue)
                     kelasValue = k;
             }
-            let finalNama = namaValue;
-            if (!finalNama) {
-                const m = lines.join('\n').match(/NAMA\s*[:\-]\s*([A-Z a-z]+)/i);
-                if (m)
-                    finalNama = m[1].trim();
-            }
-            const fieldsPresent = Boolean(finalNama && (nis || nisn) && ttlNormalized && kelasValue);
-            if (!fieldsPresent && !headlineOk) {
-                throw new common_1.BadRequestException('⚠️ Data kartu pelajar tidak lengkap atau teks sulit dibaca. Coba unggah ulang dengan gambar lebih jelas.');
+            const fieldsPresent = Boolean(namaValue && (nis || nisn) && ttlNormalized && kelasValue);
+            if (!fieldsPresent) {
+                throw new common_1.BadRequestException('⚠️ Data kartu pelajar tidak lengkap. Coba unggah ulang dengan gambar lebih jelas.');
             }
             function normalizeCompare(s) {
-                return (s || '')
-                    .toUpperCase()
-                    .replace(/\s+/g, ' ')
-                    .trim();
+                return (s || '').toUpperCase().replace(/\s+/g, ' ').trim();
             }
             function extractRomawiKelas(kelasOcr) {
                 const romawiList = ['X', 'XI', 'XII', 'XIII'];
@@ -306,14 +278,14 @@ let StudentCardValidationService = class StudentCardValidationService {
             console.log(`OCR JURUSAN  : "${jurusanOcrNorm}"`);
             console.log(`INPUT JURUSAN: "${inputJurusanNorm}"`);
             console.log(`➡️ HASIL JURUSAN VALID: ${jurusanValid ? '✅ Sesuai' : '❌ Tidak sesuai'}`);
-            const result = {
-                nama: finalNama || '',
-                nis: nis || '',
-                nisn: nisn || '',
-                ttl: ttlNormalized || '',
-                gender: genderValue || '',
-                kelas: kelasValue || '',
-                jurusan: jurusanValue || '',
+            return {
+                nama: namaValue || '',
+                nis,
+                nisn,
+                ttl: ttlNormalized,
+                gender: genderValue,
+                kelas: kelasValue,
+                jurusan: jurusanValue,
                 raw_lines: lines.slice(0, 30),
                 validasi: {
                     kelas: kelasValid,
@@ -321,8 +293,6 @@ let StudentCardValidationService = class StudentCardValidationService {
                     status: kelasValid && jurusanValid ? 'sesuai' : 'tidak sesuai'
                 }
             };
-            console.log('✅ [OCR Extracted Data]:', result);
-            return result;
         }
         catch (error) {
             console.error('❌ [OCR Error]:', error?.message || error);

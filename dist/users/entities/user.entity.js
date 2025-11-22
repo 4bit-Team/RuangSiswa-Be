@@ -14,6 +14,9 @@ const typeorm_1 = require("typeorm");
 const student_card_entity_1 = require("../../student-card/entities/student-card.entity");
 const kelas_entity_1 = require("../../kelas/entities/kelas.entity");
 const jurusan_entity_1 = require("../../jurusan/entities/jurusan.entity");
+const conversation_entity_1 = require("../../chat/entities/conversation.entity");
+const message_entity_1 = require("../../chat/entities/message.entity");
+const call_entity_1 = require("../../chat/entities/call.entity");
 let User = class User {
     id;
     username;
@@ -25,6 +28,12 @@ let User = class User {
     kelas;
     jurusan;
     studentCards;
+    sentConversations;
+    receivedConversations;
+    sentMessages;
+    receivedMessages;
+    initiatedCalls;
+    receivedCalls;
 };
 exports.User = User;
 __decorate([
@@ -56,19 +65,41 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "kartu_pelajar_file", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => kelas_entity_1.Kelas, (kelas) => kelas.users, { nullable: true }),
-    (0, typeorm_1.JoinColumn)({ name: 'kelas_id' }),
+    (0, typeorm_1.ManyToOne)(() => kelas_entity_1.Kelas, kelas => kelas.users, { nullable: true }),
     __metadata("design:type", kelas_entity_1.Kelas)
 ], User.prototype, "kelas", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => jurusan_entity_1.Jurusan, (jurusan) => jurusan.users, { nullable: true }),
-    (0, typeorm_1.JoinColumn)({ name: 'jurusan_id' }),
+    (0, typeorm_1.ManyToOne)(() => jurusan_entity_1.Jurusan, jurusan => jurusan.users, { nullable: true }),
     __metadata("design:type", jurusan_entity_1.Jurusan)
 ], User.prototype, "jurusan", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => student_card_entity_1.StudentCard, card => card.user),
     __metadata("design:type", Array)
 ], User.prototype, "studentCards", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => conversation_entity_1.Conversation, conversation => conversation.sender),
+    __metadata("design:type", Array)
+], User.prototype, "sentConversations", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => conversation_entity_1.Conversation, conversation => conversation.receiver),
+    __metadata("design:type", Array)
+], User.prototype, "receivedConversations", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => message_entity_1.Message, message => message.sender),
+    __metadata("design:type", Array)
+], User.prototype, "sentMessages", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => message_entity_1.Message, message => message.receiver),
+    __metadata("design:type", Array)
+], User.prototype, "receivedMessages", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => call_entity_1.Call, call => call.caller),
+    __metadata("design:type", Array)
+], User.prototype, "initiatedCalls", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => call_entity_1.Call, call => call.receiver),
+    __metadata("design:type", Array)
+], User.prototype, "receivedCalls", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);

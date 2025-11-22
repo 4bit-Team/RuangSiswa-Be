@@ -8,6 +8,7 @@ import { KelasModule } from './kelas/kelas.module';
 import { JurusanModule } from './jurusan/jurusan.module';
 import { UsersModule } from './users/users.module';
 import { LoggerModule } from './logger/logger.module';
+import { ChatModule } from './chat/chat.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -53,7 +54,8 @@ import * as path from 'path';
   UsersModule,
   LoggerModule,
   KelasModule,
-  JurusanModule
+  JurusanModule,
+  ChatModule
   ],
 })
 export class AppModule {}

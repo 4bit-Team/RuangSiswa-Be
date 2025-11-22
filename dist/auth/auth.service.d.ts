@@ -45,5 +45,11 @@ export declare class AuthService {
         kelas: import("../kelas/entities/kelas.entity").Kelas;
         jurusan: import("../jurusan/entities/jurusan.entity").Jurusan;
         studentCards: import("../student-card/entities/student-card.entity").StudentCard[];
+        sentConversations: import("../chat/entities/conversation.entity").Conversation[];
+        receivedConversations: import("../chat/entities/conversation.entity").Conversation[];
+        sentMessages: import("../chat/entities/message.entity").Message[];
+        receivedMessages: import("../chat/entities/message.entity").Message[];
+        initiatedCalls: import("../chat/entities/call.entity").Call[];
+        receivedCalls: import("../chat/entities/call.entity").Call[];
     }>;
 }
