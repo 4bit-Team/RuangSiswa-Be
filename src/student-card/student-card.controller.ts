@@ -112,6 +112,23 @@ export class StudentCardController {
     return this.cardService.findAll();
   }
 
+  @Get('extracted_data')
+  async getExtractedData() {
+    const cards = await this.cardService.findAll();
+    return cards
+      .filter(card => card.extracted_data)
+      .map(card => ({
+        user_id: card.user?.id?.toString() || '',
+        kelas: card.extracted_data?.kelas || card.kelas || '',
+        nama: card.extracted_data?.nama || '',
+        nis: card.extracted_data?.nis || '',
+        nisn: card.extracted_data?.nisn || '',
+        ttl: card.extracted_data?.ttl || '',
+        gender: card.extracted_data?.gender || '',
+        jurusan: card.extracted_data?.jurusan || card.jurusan || '',
+      }));
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.cardService.findOne(+id);

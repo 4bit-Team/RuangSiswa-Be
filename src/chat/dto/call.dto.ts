@@ -10,6 +10,10 @@ export class CreateCallDto {
 
   @IsEnum(CallType)
   callType: CallType;
+
+  @IsOptional()
+  @IsString()
+  offer?: string; // SDP offer dari caller
 }
 
 export class CallOfferDto {

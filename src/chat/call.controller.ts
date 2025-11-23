@@ -13,7 +13,7 @@ import { CallService } from './call.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { CreateCallDto } from './dto/call.dto';
 
-@Controller('api/calls')
+@Controller('calls')
 @UseGuards(JwtAuthGuard)
 export class CallController {
   constructor(private callService: CallService) {}

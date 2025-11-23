@@ -17,6 +17,7 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { CreateCallDto, CallOfferDto, CallAnswerDto, CallRejectDto, CallEndDto, IceCandidateDto } from './dto/call.dto';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
+import { RateLimiter, IceCandidateSpamDetector } from './rate-limiter';
 
 interface AuthenticatedSocket extends Socket {
   userId: number;
@@ -39,11 +40,42 @@ export class ChatGateway
   // Track online users: Map<userId, socketId>
   private onlineUsers = new Map<number, string>();
 
+  // Rate limiters untuk berbagai events
+  private messageLimiter: RateLimiter;
+  private callLimiter: RateLimiter;
+  private iceLimiter: RateLimiter;
+  private spamDetector: IceCandidateSpamDetector;
+
   constructor(
     private jwtService: JwtService,
     private chatService: ChatService,
     private callService: CallService,
-  ) {}
+  ) {
+    // Initialize rate limiters
+    // 50 messages per 60 seconds
+    this.messageLimiter = new RateLimiter({
+      windowMs: 60000,
+      maxRequests: 50,
+      message: 'Too many messages sent. Please try again later.',
+    });
+
+    // 20 call attempts per 60 seconds
+    this.callLimiter = new RateLimiter({
+      windowMs: 60000,
+      maxRequests: 20,
+      message: 'Too many call attempts. Please try again later.',
+    });
+
+    // 100 ICE candidates per 60 seconds
+    this.iceLimiter = new RateLimiter({
+      windowMs: 60000,
+      maxRequests: 100,
+      message: 'Too many ICE candidates. Possible DDoS attempt.',
+    });
+
+    // ICE candidate spam detector
+    this.spamDetector = new IceCandidateSpamDetector();
+  }
 
   /**
    * Lifecycle hook - called when gateway is initialized
@@ -175,6 +207,36 @@ export class ChatGateway
     @MessageBody() data: CreateMessageDto,
   ) {
     try {
+      // Check if user is blocked
+      const userBlock = this.messageLimiter.isBlocked(client.userId);
+      if (userBlock.blocked) {
+        console.warn(
+          `🚫 [ChatGateway] Blocked user ${client.userId} attempted message`,
+        );
+        return {
+          status: 'error',
+          message: `You are temporarily blocked: ${userBlock.reason}`,
+        };
+      }
+
+      // Rate limit check
+      const rateCheck = this.messageLimiter.check(`msg:${client.userId}`);
+      if (!rateCheck.allowed) {
+        console.warn(
+          `⚠️ [ChatGateway] Rate limit exceeded for user ${client.userId}`,
+        );
+        // Block user for 5 minutes after exceeding limit
+        this.messageLimiter.blockUser(
+          client.userId,
+          300000,
+          'Message rate limit exceeded',
+        );
+        return {
+          status: 'error',
+          message: rateCheck.message,
+        };
+      }
+
       const message = await this.chatService.sendMessage(client.userId, data);
 
       const conversationRoom = `conversation-${data.conversationId}`;
@@ -414,14 +476,46 @@ export class ChatGateway
       if (!client.userId) {
         throw new Error('User not authenticated or userId is missing');
       }
+
+      // Check if user is blocked
+      const userBlock = this.callLimiter.isBlocked(client.userId);
+      if (userBlock.blocked) {
+        console.warn(
+          `🚫 [ChatGateway] Blocked user ${client.userId} attempted call`,
+        );
+        return {
+          status: 'error',
+          message: `You are temporarily blocked from making calls: ${userBlock.reason}`,
+        };
+      }
+
+      // Rate limit check
+      const rateCheck = this.callLimiter.check(`call:${client.userId}`);
+      if (!rateCheck.allowed) {
+        console.warn(
+          `⚠️ [ChatGateway] Call rate limit exceeded for user ${client.userId}`,
+        );
+        // Block user for 10 minutes after exceeding limit
+        this.callLimiter.blockUser(
+          client.userId,
+          600000,
+          'Call rate limit exceeded',
+        );
+        return {
+          status: 'error',
+          message: rateCheck.message,
+        };
+      }
+
       const call = await this.callService.initiateCall(client.userId, data);
 
-      // Notify receiver about incoming call
+      // Notify receiver about incoming call WITH OFFER
       this.notifyUser(data.receiverId, 'call-incoming', {
         callId: call.id,
         callType: call.callType,
         callerId: client.userId,
-        callerName: 'Caller', // Get from user service in production
+        callerName: 'Caller',
+        offer: data.offer, // ✅ Include offer immediately
         timestamp: new Date(),
       });
 
@@ -584,6 +678,7 @@ export class ChatGateway
 
   /**
    * Exchange ICE candidates (for NAT traversal)
+   * CRITICAL: Most likely target for DDoS spam
    */
   @SubscribeMessage('ice-candidate')
   async handleIceCandidate(
@@ -591,20 +686,91 @@ export class ChatGateway
     @MessageBody() data: IceCandidateDto,
   ) {
     try {
+      // Check if user is blocked
+      const userBlock = this.iceLimiter.isBlocked(client.userId);
+      if (userBlock.blocked) {
+        console.warn(
+          `🚫 [ChatGateway] Blocked user ${client.userId} attempted ICE candidate spam`,
+        );
+        return {
+          status: 'error',
+          message: `You are temporarily blocked: ${userBlock.reason}`,
+        };
+      }
+
+      // Validate ICE candidate format
+      if (!data.candidate) {
+        console.warn(
+          `⚠️ [ChatGateway] Invalid ICE candidate from user ${client.userId}: missing candidate string`,
+        );
+        return {
+          status: 'error',
+          message: 'Invalid ICE candidate: missing candidate string',
+        };
+      }
+
+      // CallId can be null during initial ice gathering, but should have it eventually
+      if (!data.callId) {
+        console.warn(
+          `⚠️ [ChatGateway] ICE candidate from user ${client.userId} has no callId (buffering)`,
+        );
+        // Don't reject, but don't process either - client should retry with callId
+        return {
+          status: 'waiting',
+          message: 'callId not yet available, candidate not forwarded',
+        };
+      }
+
+      // Check for spam/DDoS patterns
+      const spamCheck = this.spamDetector.checkSpam(client.userId, data.callId);
+      if (spamCheck.spam) {
+        const reason = spamCheck.reason || 'ICE candidate spam detected';
+        console.warn(`🚨 [ChatGateway] ICE spam detected from user ${client.userId}: ${reason}`);
+        
+        // Block user for 30 minutes
+        this.iceLimiter.blockUser(client.userId, 1800000, reason);
+        
+        // Alert admin (log it)
+        console.error(
+          `[SECURITY] POTENTIAL DDoS ATTACK - User ${client.userId} blocked for spam: ${reason}`,
+        );
+        return {
+          status: 'error',
+          message: 'Possible DDoS attempt detected. You have been temporarily blocked.',
+        };
+      }
+
+      // Rate limit check
+      const rateCheck = this.iceLimiter.check(`ice:${client.userId}`);
+      if (!rateCheck.allowed) {
+        console.warn(`⚠️ [ChatGateway] ICE rate limit exceeded for user ${client.userId}`);
+        this.iceLimiter.blockUser(
+          client.userId,
+          600000,
+          'ICE candidate rate limit exceeded',
+        );
+        return {
+          status: 'error',
+          message: rateCheck.message,
+        };
+      }
+
       const call = await this.callService.addIceCandidate(client.userId, data);
 
       // Forward ICE candidate to other party
       const otherUserId =
         call.callerId === client.userId ? call.receiverId : call.callerId;
 
+      // Use candidate as-is (frontend sends the candidate string, not JSON)
       this.notifyUser(otherUserId, 'ice-candidate', {
         callId: data.callId,
-        candidate: JSON.parse(data.candidate),
+        candidate: data.candidate, // Already a string from frontend
         sdpMLineIndex: data.sdpMLineIndex,
         sdpMid: data.sdpMid,
         timestamp: new Date(),
       });
 
+      console.log(`✓ ICE candidate forwarded: ${client.userId} → ${otherUserId} for call ${data.callId}`);
       return { status: 'ice-candidate-sent' };
     } catch (error) {
       console.error('[WebSocket] Error sending ICE candidate:', error.message);
