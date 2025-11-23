@@ -20,10 +20,12 @@ const call_entity_1 = require("../../chat/entities/call.entity");
 let User = class User {
     id;
     username;
+    fullName;
     email;
     password;
     role;
     status;
+    specialty;
     kartu_pelajar_file;
     kelas;
     jurusan;
@@ -45,6 +47,10 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "username", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "fullName", void 0);
+__decorate([
     (0, typeorm_1.Column)({ unique: true }),
     __metadata("design:type", String)
 ], User.prototype, "email", void 0);
@@ -60,6 +66,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'enum', enum: ['aktif', 'nonaktif'], default: 'aktif' }),
     __metadata("design:type", String)
 ], User.prototype, "status", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "specialty", void 0);
 __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)

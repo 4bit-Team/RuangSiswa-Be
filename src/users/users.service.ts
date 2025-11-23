@@ -28,6 +28,12 @@ export class UsersService {
     return this.userRepo.find();
   }
 
+  findByRole(role: string) {
+    return this.userRepo.find({ 
+      where: { role: role.toLowerCase() as any },
+    });
+  }
+
   findOne(id: number) {
     return this.userRepo.findOne({ where: { id } });
   }

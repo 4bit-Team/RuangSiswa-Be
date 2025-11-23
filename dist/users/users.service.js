@@ -35,6 +35,11 @@ let UsersService = class UsersService {
     findAll() {
         return this.userRepo.find();
     }
+    findByRole(role) {
+        return this.userRepo.find({
+            where: { role: role.toLowerCase() },
+        });
+    }
     findOne(id) {
         return this.userRepo.findOne({ where: { id } });
     }

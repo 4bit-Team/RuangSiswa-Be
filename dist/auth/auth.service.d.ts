@@ -38,9 +38,11 @@ export declare class AuthService {
         token: string;
         id: number;
         username: string;
+        fullName: string;
         email: string;
         role: import("../users/entities/user.entity").UserRole;
         status: import("../users/entities/user.entity").UserStatus;
+        specialty: string;
         kartu_pelajar_file: string;
         kelas: import("../kelas/entities/kelas.entity").Kelas;
         jurusan: import("../jurusan/entities/jurusan.entity").Jurusan;

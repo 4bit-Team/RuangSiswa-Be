@@ -37,7 +37,7 @@ export class Call {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ name: 'conversation_id', nullable: false })
   conversationId: number;
 
   @Column({ type: 'enum', enum: CallType })
@@ -46,7 +46,7 @@ export class Call {
   @Column({ type: 'enum', enum: CallStatus, default: CallStatus.INITIATED })
   status: CallStatus;
 
-  @Column()
+  @Column({ name: 'caller_id', nullable: false })
   callerId: number; // Yang menelpon
 
   @ManyToOne(() => User, (user) => user.initiatedCalls, {
@@ -56,7 +56,7 @@ export class Call {
   @JoinColumn({ name: 'caller_id' })
   caller: User;
 
-  @Column()
+  @Column({ name: 'receiver_id', nullable: false })
   receiverId: number; // Yang menerima panggilan
 
   @ManyToOne(() => User, (user) => user.receivedCalls, {

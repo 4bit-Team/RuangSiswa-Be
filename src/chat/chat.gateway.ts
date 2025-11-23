@@ -60,13 +60,22 @@ export class ChatGateway
     try {
       const token = client.handshake.auth.token;
       if (!token) {
+        console.error('[WebSocket] No token provided');
         client.disconnect();
         return;
       }
 
       // Verify JWT token
       const payload = this.jwtService.verify(token);
-      client.userId = payload.id || payload.sub;
+      console.log('[WebSocket] JWT Payload:', payload);
+      
+      client.userId = payload.id || payload.sub || payload.userId;
+      
+      if (!client.userId) {
+        console.error('[WebSocket] No userId found in JWT payload:', payload);
+        client.disconnect();
+        return;
+      }
 
       // Track user as online
       this.onlineUsers.set(client.userId, client.id);
@@ -402,6 +411,9 @@ export class ChatGateway
     @MessageBody() data: CreateCallDto,
   ) {
     try {
+      if (!client.userId) {
+        throw new Error('User not authenticated or userId is missing');
+      }
       const call = await this.callService.initiateCall(client.userId, data);
 
       // Notify receiver about incoming call

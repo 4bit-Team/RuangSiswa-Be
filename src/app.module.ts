@@ -9,6 +9,8 @@ import { JurusanModule } from './jurusan/jurusan.module';
 import { UsersModule } from './users/users.module';
 import { LoggerModule } from './logger/logger.module';
 import { ChatModule } from './chat/chat.module';
+import { ReservasiModule } from './reservasi/reservasi.module';
+import { BkScheduleModule } from './bk-schedule/bk-schedule.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -55,7 +57,9 @@ import * as path from 'path';
   LoggerModule,
   KelasModule,
   JurusanModule,
-  ChatModule
+  ChatModule,
+  ReservasiModule,
+  BkScheduleModule
   ],
 })
 export class AppModule {}

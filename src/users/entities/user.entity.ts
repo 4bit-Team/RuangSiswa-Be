@@ -17,6 +17,9 @@ export class User {
   @Column({ unique: true })
   username: string;
 
+  @Column({ nullable: true })
+  fullName: string;
+
   @Column({ unique: true })
   email: string;
 
@@ -29,6 +32,8 @@ export class User {
   @Column({ type: 'enum', enum: ['aktif', 'nonaktif'], default: 'aktif' })
   status: UserStatus;
 
+  @Column({ nullable: true })
+  specialty: string;
 
   @Column({ nullable: true })
   kartu_pelajar_file: string;

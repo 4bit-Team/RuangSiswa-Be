@@ -9,10 +9,12 @@ export type UserStatus = 'aktif' | 'nonaktif';
 export declare class User {
     id: number;
     username: string;
+    fullName: string;
     email: string;
     password: string;
     role: UserRole;
     status: UserStatus;
+    specialty: string;
     kartu_pelajar_file: string;
     kelas: Kelas;
     jurusan: Jurusan;

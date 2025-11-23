@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { ChatService } from './chat.service';
+import { ChatGateway } from './chat.gateway';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ConversationDto } from './dto/conversation.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -22,7 +23,10 @@ import { UpdateMessageDto } from './dto/update-message.dto';
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
   /**
    * GET /chat/conversations
@@ -92,7 +96,32 @@ export class ChatController {
     @Request() req,
     @Body() dto: CreateMessageDto,
   ) {
-    return await this.chatService.sendMessage(req.user.id, dto);
+    const message = await this.chatService.sendMessage(req.user.id, dto);
+    
+    // Broadcast message via WebSocket to conversation room
+    this.chatGateway.notifyConversation(
+      dto.conversationId,
+      'message-received',
+      {
+        message,
+        conversationId: dto.conversationId,
+        timestamp: new Date(),
+      }
+    );
+    
+    // Also send direct notification to receiver's personal room
+    this.chatGateway.notifyUser(
+      dto.receiverId,
+      'new-message',
+      {
+        message,
+        conversationId: dto.conversationId,
+        senderId: req.user.id,
+        timestamp: new Date(),
+      }
+    );
+    
+    return message;
   }
 
   /**

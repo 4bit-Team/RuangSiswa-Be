@@ -15,6 +15,12 @@ export class CallService {
    * Inisiasi panggilan (caller membuat offer)
    */
   async initiateCall(callerId: number, dto: CreateCallDto): Promise<Call> {
+    console.log(`[CallService] initiateCall called with callerId: ${callerId}, dto:`, dto);
+    
+    if (!callerId) {
+      throw new Error('callerId is required and must not be null');
+    }
+
     // Cek apakah sudah ada panggilan aktif
     const activeCall = await this.callRepository.findOne({
       where: [
@@ -33,16 +39,28 @@ export class CallService {
       throw new Error('You already have an active call');
     }
 
-    const call = this.callRepository.create({
-      callerId,
-      receiverId: dto.receiverId,
+    const callData = {
       conversationId: dto.conversationId,
       callType: dto.callType,
       status: CallStatus.INITIATED,
       ringingStartedAt: new Date(),
-    });
+      callerId: callerId,
+      receiverId: dto.receiverId,
+    };
 
-    return this.callRepository.save(call);
+    console.log(`[CallService] Creating call with data:`, callData);
+    
+    // Create call using repository.create() and save()
+    const newCall = this.callRepository.create(callData);
+    const result = await this.callRepository.save(newCall);
+    
+    if (!result) {
+      throw new Error('Failed to create call');
+    }
+    
+    console.log(`[CallService] Call saved successfully:`, result);
+    
+    return result;
   }
 
   /**

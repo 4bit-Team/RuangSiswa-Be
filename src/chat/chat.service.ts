@@ -128,10 +128,12 @@ export class ChatService {
    * Get specific conversation with messages
    */
   async getConversation(conversationId: number, userId: number, limit: number = 50) {
-    const conversation = await this.conversationRepository.findOne({
-      where: { id: conversationId },
-      relations: ['sender', 'receiver'],
-    });
+    const conversation = await this.conversationRepository
+      .createQueryBuilder('c')
+      .leftJoinAndSelect('c.sender', 'sender')
+      .leftJoinAndSelect('c.receiver', 'receiver')
+      .where('c.id = :conversationId', { conversationId })
+      .getOne();
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
