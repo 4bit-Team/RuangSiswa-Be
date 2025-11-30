@@ -16,6 +16,8 @@ export declare class User {
     status: UserStatus;
     specialty: string;
     kartu_pelajar_file: string;
+    phone_number: string;
+    kelas_lengkap: string;
     kelas: Kelas;
     jurusan: Jurusan;
     studentCards: StudentCard[];

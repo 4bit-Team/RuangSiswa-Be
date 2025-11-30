@@ -7,6 +7,7 @@ export declare class StudentCardValidationService {
         gender: string;
         kelas: string;
         jurusan: string;
+        kelas_lengkap: string;
         raw_lines: string[];
         validasi: {
             kelas: boolean | "";

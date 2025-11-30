@@ -8,6 +8,8 @@ class CreateUserDto {
     role;
     status;
     kartu_pelajar_file;
+    phone_number;
+    kelas_lengkap;
     isVerified;
     kelas_id;
     jurusan_id;

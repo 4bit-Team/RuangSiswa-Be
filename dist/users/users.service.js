@@ -55,6 +55,18 @@ let UsersService = class UsersService {
             throw new Error('User not found after update');
         return updatedUser;
     }
+    async updateRuanganFromOcr(id, ruangan) {
+        await this.userRepo
+            .createQueryBuilder()
+            .update(user_entity_1.User)
+            .set({ kelas_lengkap: ruangan })
+            .where('id = :id', { id })
+            .execute();
+        const updatedUser = await this.findOne(id);
+        if (!updatedUser)
+            throw new Error('User not found after update');
+        return updatedUser;
+    }
     async update(id, updateUserDto) {
         const user = await this.findOne(id);
         if (!user)

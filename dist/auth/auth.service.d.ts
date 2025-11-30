@@ -22,6 +22,7 @@ export declare class AuthService {
             gender: string;
             kelas: string;
             jurusan: string;
+            kelas_lengkap: string;
             raw_lines: string[];
             validasi: {
                 kelas: boolean | "";
@@ -44,6 +45,8 @@ export declare class AuthService {
         status: import("../users/entities/user.entity").UserStatus;
         specialty: string;
         kartu_pelajar_file: string;
+        phone_number: string;
+        kelas_lengkap: string;
         kelas: import("../kelas/entities/kelas.entity").Kelas;
         jurusan: import("../jurusan/entities/jurusan.entity").Jurusan;
         studentCards: import("../student-card/entities/student-card.entity").StudentCard[];

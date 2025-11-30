@@ -38,6 +38,12 @@ export class User {
   @Column({ nullable: true })
   kartu_pelajar_file: string;
 
+  @Column({ nullable: true })
+  phone_number: string;
+
+  @Column({ nullable: true })
+  kelas_lengkap: string;
+
   @ManyToOne(() => Kelas, kelas => kelas.users, { nullable: true })
   kelas: Kelas;
 

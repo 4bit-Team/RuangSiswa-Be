@@ -27,6 +27,8 @@ let User = class User {
     status;
     specialty;
     kartu_pelajar_file;
+    phone_number;
+    kelas_lengkap;
     kelas;
     jurusan;
     studentCards;
@@ -74,6 +76,14 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "kartu_pelajar_file", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "phone_number", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "kelas_lengkap", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => kelas_entity_1.Kelas, kelas => kelas.users, { nullable: true }),
     __metadata("design:type", kelas_entity_1.Kelas)

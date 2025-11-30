@@ -8,6 +8,7 @@ class RegisterDto {
     kartu_pelajar_file;
     kelas_id;
     jurusan_id;
+    phone_number;
 }
 exports.RegisterDto = RegisterDto;
 //# sourceMappingURL=register.dto.js.map

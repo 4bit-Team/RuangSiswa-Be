@@ -220,9 +220,10 @@ export class StudentCardValidationService {
       if (kelasRaw) {
         let k = kelasRaw.toUpperCase().replace(/O/g, '0').replace(/\s+/g, ' ').trim();
         k = k.replace(/[^A-Z0-9 ]/g, '').replace(/\s{2,}/g, ' ');
-        const tingkatMatch = k.match(/\b(XIII|XII|XI|X)\b/);
-        const tingkat = tingkatMatch ? tingkatMatch[0] : '';
-        const afterTingkat = k.replace(/\b(XIII|XII|XI|X)\b/, '').trim();
+        // Fix: Pisahkan tingkat Romawi dari huruf berikutnya tanpa word boundary
+        const tingkatMatch = k.match(/^(XIII|XII|XI|X)(?:\s|$)/);
+        const tingkat = tingkatMatch ? tingkatMatch[1] : '';
+        const afterTingkat = k.replace(/^(XIII|XII|XI|X)\s*/, '').trim();
 
         let bestMatch = { jur: '', sim: 0 };
         for (const j of jurusanList) {
@@ -242,15 +243,23 @@ export class StudentCardValidationService {
         throw new BadRequestException('⚠️ Data kartu pelajar tidak lengkap. Coba unggah ulang dengan gambar lebih jelas.');
       }
 
+      // === KELAS LENGKAP: Kombinasi Tingkat + Jurusan + Nomor ===
+      // Format: XI SIJA 1 (dari OCR kelas)
+      const kelasLengkapValue = kelasValue;
+
       // === 6️⃣ Validasi dengan input register ===
       function normalizeCompare(s: string) {
         return (s || '').toUpperCase().replace(/\s+/g, ' ').trim();
       }
       function extractRomawiKelas(kelasOcr: string): string {
-        const romawiList = ['X', 'XI', 'XII', 'XIII'];
+        const romawiList = ['XIII', 'XII', 'XI', 'X'];
         if (!kelasOcr) return '';
-        const firstWord = kelasOcr.split(' ')[0].toUpperCase();
-        return romawiList.includes(firstWord) ? firstWord : '';
+        // Check from start of string (most significant first: XIII, XII, XI, X)
+        for (const romawi of romawiList) {
+          const regex = new RegExp(`^${romawi}(?:\\s|$)`, 'i');
+          if (regex.test(kelasOcr)) return romawi.toUpperCase();
+        }
+        return '';
       }
 
       const kelasOcrRomawi = extractRomawiKelas(kelasValue || '');
@@ -278,6 +287,7 @@ export class StudentCardValidationService {
         gender: genderValue,
         kelas: kelasValue,
         jurusan: jurusanValue,
+        kelas_lengkap: kelasLengkapValue,
         raw_lines: lines.slice(0, 30),
         validasi: {
           kelas: kelasValid,

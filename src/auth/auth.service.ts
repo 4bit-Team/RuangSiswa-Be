@@ -34,6 +34,7 @@ export class AuthService {
       kartu_pelajar_file: filePath || undefined,
       kelas_id: registerDto.kelas_id,
       jurusan_id: registerDto.jurusan_id,
+      phone_number: registerDto.phone_number,
     });
 
     // 3️⃣ Jika ada file upload (opsional)
@@ -101,8 +102,10 @@ export class AuthService {
         username: user.username,
         email: user.email,
         role: user.role,
+        phone_number: user.phone_number,
         kelas: user.kelas?.nama,
         jurusan: user.jurusan?.nama,
+        kelas_lengkap: user.kelas_lengkap,
       };
 
       const token = this.jwtService.sign(payload);

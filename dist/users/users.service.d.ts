@@ -10,6 +10,7 @@ export declare class UsersService {
     findByRole(role: string): Promise<User[]>;
     findOne(id: number): Promise<User | null>;
     updateStatus(id: number, status: UserStatus): Promise<User>;
+    updateRuanganFromOcr(id: number, ruangan: string): Promise<User>;
     update(id: number, updateUserDto: UpdateUserDto): Promise<User | null>;
     remove(id: number): Promise<User | null>;
     findOneByEmail(email: string): Promise<User | null>;

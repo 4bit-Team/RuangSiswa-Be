@@ -51,6 +51,19 @@ export class UsersService {
   return updatedUser;
 }
 
+  async updateRuanganFromOcr(id: number, ruangan: string): Promise<User> {
+    await this.userRepo
+      .createQueryBuilder()
+      .update(User)
+      .set({ kelas_lengkap: ruangan })
+      .where('id = :id', { id })
+      .execute();
+
+    const updatedUser = await this.findOne(id);
+    if (!updatedUser) throw new Error('User not found after update');
+    return updatedUser;
+  }
+
 
   async update(id: number, updateUserDto: UpdateUserDto) {
     const user = await this.findOne(id);

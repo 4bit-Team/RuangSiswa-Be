@@ -233,9 +233,9 @@ let StudentCardValidationService = class StudentCardValidationService {
             if (kelasRaw) {
                 let k = kelasRaw.toUpperCase().replace(/O/g, '0').replace(/\s+/g, ' ').trim();
                 k = k.replace(/[^A-Z0-9 ]/g, '').replace(/\s{2,}/g, ' ');
-                const tingkatMatch = k.match(/\b(XIII|XII|XI|X)\b/);
-                const tingkat = tingkatMatch ? tingkatMatch[0] : '';
-                const afterTingkat = k.replace(/\b(XIII|XII|XI|X)\b/, '').trim();
+                const tingkatMatch = k.match(/^(XIII|XII|XI|X)(?:\s|$)/);
+                const tingkat = tingkatMatch ? tingkatMatch[1] : '';
+                const afterTingkat = k.replace(/^(XIII|XII|XI|X)\s*/, '').trim();
                 let bestMatch = { jur: '', sim: 0 };
                 for (const j of jurusanList) {
                     const sim = similarity(afterTingkat, j);
@@ -254,15 +254,20 @@ let StudentCardValidationService = class StudentCardValidationService {
             if (!fieldsPresent) {
                 throw new common_1.BadRequestException('⚠️ Data kartu pelajar tidak lengkap. Coba unggah ulang dengan gambar lebih jelas.');
             }
+            const kelasLengkapValue = kelasValue;
             function normalizeCompare(s) {
                 return (s || '').toUpperCase().replace(/\s+/g, ' ').trim();
             }
             function extractRomawiKelas(kelasOcr) {
-                const romawiList = ['X', 'XI', 'XII', 'XIII'];
+                const romawiList = ['XIII', 'XII', 'XI', 'X'];
                 if (!kelasOcr)
                     return '';
-                const firstWord = kelasOcr.split(' ')[0].toUpperCase();
-                return romawiList.includes(firstWord) ? firstWord : '';
+                for (const romawi of romawiList) {
+                    const regex = new RegExp(`^${romawi}(?:\\s|$)`, 'i');
+                    if (regex.test(kelasOcr))
+                        return romawi.toUpperCase();
+                }
+                return '';
             }
             const kelasOcrRomawi = extractRomawiKelas(kelasValue || '');
             const inputKelasNorm = normalizeCompare(inputKelas || '');
@@ -286,6 +291,7 @@ let StudentCardValidationService = class StudentCardValidationService {
                 gender: genderValue,
                 kelas: kelasValue,
                 jurusan: jurusanValue,
+                kelas_lengkap: kelasLengkapValue,
                 raw_lines: lines.slice(0, 30),
                 validasi: {
                     kelas: kelasValid,

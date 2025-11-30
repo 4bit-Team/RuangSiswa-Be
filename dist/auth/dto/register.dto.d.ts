@@ -5,4 +5,5 @@ export declare class RegisterDto {
     kartu_pelajar_file: string;
     kelas_id?: number;
     jurusan_id?: number;
+    phone_number?: string;
 }
