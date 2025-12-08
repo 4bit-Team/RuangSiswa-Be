@@ -4,6 +4,7 @@ import { Jurusan } from '../../jurusan/entities/jurusan.entity';
 import { Conversation } from '../../chat/entities/conversation.entity';
 import { Message } from '../../chat/entities/message.entity';
 import { Call } from '../../chat/entities/call.entity';
+import { News } from '../../news/entities/news.entity';
 export type UserRole = 'kesiswaan' | 'siswa' | 'admin' | 'bk';
 export type UserStatus = 'aktif' | 'nonaktif';
 export declare class User {
@@ -27,4 +28,5 @@ export declare class User {
     receivedMessages: Message[];
     initiatedCalls: Call[];
     receivedCalls: Call[];
+    newsArticles: News[];
 }

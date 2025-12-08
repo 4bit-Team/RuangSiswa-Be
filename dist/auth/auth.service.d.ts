@@ -56,5 +56,6 @@ export declare class AuthService {
         receivedMessages: import("../chat/entities/message.entity").Message[];
         initiatedCalls: import("../chat/entities/call.entity").Call[];
         receivedCalls: import("../chat/entities/call.entity").Call[];
+        newsArticles: import("../news/entities/news.entity").News[];
     }>;
 }

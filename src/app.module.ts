@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MulterModule } from '@nestjs/platform-express';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { diskStorage } from 'multer';
 import { AuthModule } from './auth/auth.module';
 import { StudentCardModule } from './student-card/student-card.module';
@@ -11,11 +12,18 @@ import { LoggerModule } from './logger/logger.module';
 import { ChatModule } from './chat/chat.module';
 import { ReservasiModule } from './reservasi/reservasi.module';
 import { BkScheduleModule } from './bk-schedule/bk-schedule.module';
+import { NewsModule } from './news/news.module';
+import { UploadModule } from './upload/upload.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
 @Module({
   imports: [
+    ServeStaticModule.forRoot({
+      rootPath: path.join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
+
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
@@ -59,7 +67,9 @@ import * as path from 'path';
   JurusanModule,
   ChatModule,
   ReservasiModule,
-  BkScheduleModule
+  BkScheduleModule,
+  NewsModule,
+  UploadModule,
   ],
 })
 export class AppModule {}

@@ -15,15 +15,29 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
 
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://ruangsiswa.my.id', 
+    'http://ruangsiswa.my.id',  
+  ];
+
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'https://ruangsiswa.my.id',
-      'http://ruangsiswa.my.id',
-      'https://be.ruangsiswa.my.id',
-    ],
+    origin: (origin, callback) => {
+      if (!origin) {
+        // request tanpa Origin (misal: curl, server-to-server)
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn('❌ CORS blocked origin:', origin);
+      return callback(new Error(`Not allowed by CORS: ${origin}`), false);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   const port = process.env.PORT || 3001;

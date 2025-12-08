@@ -17,6 +17,7 @@ const jurusan_entity_1 = require("../../jurusan/entities/jurusan.entity");
 const conversation_entity_1 = require("../../chat/entities/conversation.entity");
 const message_entity_1 = require("../../chat/entities/message.entity");
 const call_entity_1 = require("../../chat/entities/call.entity");
+const news_entity_1 = require("../../news/entities/news.entity");
 let User = class User {
     id;
     username;
@@ -38,6 +39,7 @@ let User = class User {
     receivedMessages;
     initiatedCalls;
     receivedCalls;
+    newsArticles;
 };
 exports.User = User;
 __decorate([
@@ -120,6 +122,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => call_entity_1.Call, call => call.receiver),
     __metadata("design:type", Array)
 ], User.prototype, "receivedCalls", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => news_entity_1.News, news => news.author),
+    __metadata("design:type", Array)
+], User.prototype, "newsArticles", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)('users')
 ], User);
