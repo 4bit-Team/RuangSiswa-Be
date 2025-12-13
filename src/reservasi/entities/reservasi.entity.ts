@@ -36,7 +36,7 @@ export class Reservasi {
   notes: string; // Catatan dari siswa
 
   @Column({ default: 'pending' })
-  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';
+  status: 'pending' | 'approved' | 'rejected' | 'in_counseling' | 'completed' | 'cancelled';
 
   @Column({ nullable: true })
   conversationId: number; // Referensi ke conversation yang dibuat saat approved
@@ -46,6 +46,15 @@ export class Reservasi {
 
   @Column({ nullable: true })
   room: string; // Ruang untuk tatap muka
+
+  @Column({ nullable: true })
+  qrCode: string; // QR code untuk attendance tatap muka
+
+  @Column({ default: false })
+  attendanceConfirmed: boolean; // Apakah sudah absen via QR scan
+
+  @Column({ nullable: true })
+  completedAt: Date; // Waktu sesi selesai
 
   @CreateDateColumn()
   createdAt: Date;

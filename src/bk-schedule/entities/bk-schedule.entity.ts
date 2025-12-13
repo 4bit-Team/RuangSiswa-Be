@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
 export type SessionType = 'tatap-muka' | 'chat';
 
@@ -10,6 +11,10 @@ export class BkSchedule {
 
   @Column()
   bkId: number; // Reference ke user dengan role 'bk'
+
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: 'bkId' })
+  bk: User;
 
   @Column({ type: 'enum', enum: ['tatap-muka', 'chat'], nullable: false, default: 'tatap-muka' })
   sessionType: SessionType; // Tipe sesi yang dijadwalkan

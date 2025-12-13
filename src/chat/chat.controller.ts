@@ -12,7 +12,14 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import * as fs from 'fs';
+import * as path from 'path';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
@@ -212,5 +219,89 @@ export class ChatController {
       query,
       limit,
     );
+  }
+
+  /**
+   * POST /chat/messages/send-voice
+   * Send voice message with audio file
+   */
+  @Post('messages/send-voice')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = path.join(__dirname, '..', '..', 'uploads', 'voices');
+          if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `voice-${uniqueSuffix}.webm`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.mimetype.match(/audio\/(webm|mpeg|wav|ogg)/)) {
+          cb(new BadRequestException('Only audio files are allowed!'), false);
+        } else {
+          cb(null, true);
+        }
+      },
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+      },
+    }),
+  )
+  async sendVoiceMessage(
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No audio file uploaded');
+    }
+
+    const conversationId = parseInt(body.conversationId);
+    const duration = parseInt(body.duration) || 0;
+    const messageType = body.messageType || 'voice';
+
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3001';
+    const voiceUrl = `${backendUrl}/uploads/voices/${file.filename}`;
+
+    // Create voice message through service
+    const message = await this.chatService.sendVoiceMessage(
+      req.user.id,
+      conversationId,
+      voiceUrl,
+      file.filename,
+      file.size,
+      duration,
+    );
+
+    // Broadcast message via WebSocket
+    this.chatGateway.notifyConversation(
+      conversationId,
+      'message-received',
+      {
+        message,
+        conversationId,
+        timestamp: new Date(),
+      }
+    );
+
+    // Send notification to receiver
+    this.chatGateway.notifyUser(
+      message.receiverId,
+      'new-message',
+      {
+        message,
+        conversationId,
+        senderId: req.user.id,
+        timestamp: new Date(),
+      }
+    );
+
+    return message;
   }
 }

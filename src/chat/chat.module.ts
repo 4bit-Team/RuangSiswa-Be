@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
+import { CallGateway } from './call.gateway';
 import { CallService } from './call.service';
 import { CallController } from './call.controller';
 import { Conversation } from './entities/conversation.entity';
@@ -19,7 +20,7 @@ import { Call } from './entities/call.entity';
       signOptions: { expiresIn: '24h' },
     }),
   ],
-  providers: [ChatService, CallService, ChatGateway],
+  providers: [ChatService, CallService, ChatGateway, CallGateway],
   controllers: [ChatController, CallController],
   exports: [ChatService, CallService],
 })

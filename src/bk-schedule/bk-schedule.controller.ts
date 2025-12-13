@@ -49,7 +49,7 @@ export class BkScheduleController {
     );
   }
 
-  // Get available BK untuk session type tertentu
+  // Get available BK untuk session type dan time tertentu dengan info booking
   @Get('available/:sessionType/:date/:time')
   async getAvailableBKs(
     @Param('sessionType') sessionType: string,
@@ -60,12 +60,25 @@ export class BkScheduleController {
     console.log(
       `🔍 Finding available BK for ${date} at ${time} (${sessionType})`,
     );
-    const availableBKIds = await this.scheduleService.getAvailableBKs(
+    const availableBKsWithStatus = await this.scheduleService.getAvailableBKsWithStatus(
       dateObj,
       time,
       sessionType as 'tatap-muka' | 'chat',
     );
-    return { date, time, sessionType, availableBKIds, count: availableBKIds.length };
+    
+    // Extract just the BK IDs for backward compatibility
+    const availableBKIds = availableBKsWithStatus
+      .filter(bk => !bk.booked)
+      .map(bk => bk.bkId);
+    
+    return { 
+      date, 
+      time, 
+      sessionType, 
+      availableBKIds, 
+      count: availableBKIds.length,
+      bookingStatus: availableBKsWithStatus, // Include full status info
+    };
   }
 
   // Check availability untuk BK tertentu dan session type

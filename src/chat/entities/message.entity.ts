@@ -17,6 +17,7 @@ export enum MessageType {
   TEXT = 'text',
   IMAGE = 'image',
   FILE = 'file',
+  VOICE = 'voice',
   SYSTEM = 'system',
 }
 
@@ -57,6 +58,9 @@ export class Message {
 
   @Column({ type: 'integer', nullable: true })
   fileSize: number; // dalam bytes
+
+  @Column({ type: 'integer', nullable: true })
+  duration: number; // durasi untuk voice message dalam detik
 
   @Column({ type: 'boolean', default: false })
   isEdited: boolean;

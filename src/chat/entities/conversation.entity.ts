@@ -41,6 +41,9 @@ export class Conversation {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
+  @Column({ default: 'active' })
+  status: 'active' | 'in_counseling' | 'completed'; // Track session status
+
   @CreateDateColumn()
   createdAt: Date;
 

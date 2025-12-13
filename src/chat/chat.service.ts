@@ -2,7 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation } from './entities/conversation.entity';
-import { Message } from './entities/message.entity';
+import { Message, MessageType } from './entities/message.entity';
 import { MessageReadStatus } from './entities/message-read-status.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ConversationDto } from './dto/conversation.dto';
@@ -63,6 +63,25 @@ export class ChatService {
     }
 
     return conversation;
+  }
+
+  /**
+   * Update conversation status (for session management)
+   */
+  async updateConversationStatus(
+    conversationId: number,
+    status: 'active' | 'in_counseling' | 'completed',
+  ): Promise<Conversation> {
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    conversation.status = status;
+    return await this.conversationRepository.save(conversation);
   }
 
   /**
@@ -196,6 +215,78 @@ export class ChatService {
       ...(fileUrl && { fileUrl }),
       ...(fileName && { fileName }),
       ...(fileSize && { fileSize }),
+    });
+
+    await this.messageRepository.save(message);
+
+    // Create read status record
+    const readStatus = this.messageReadStatusRepository.create({
+      messageId: message.id,
+      userId: receiverId,
+      isDelivered: true,
+      isRead: false,
+    });
+    await this.messageReadStatusRepository.save(readStatus);
+
+    // Update conversation last message time
+    await this.conversationRepository.update(
+      { id: conversationId },
+      { lastMessageId: message.id, lastMessageAt: new Date() },
+    );
+
+    const savedMessage = await this.messageRepository.findOne({
+      where: { id: message.id },
+      relations: ['sender', 'receiver', 'readStatuses'],
+    });
+
+    if (!savedMessage) {
+      throw new NotFoundException('Failed to retrieve saved message');
+    }
+
+    return savedMessage;
+  }
+
+  /**
+   * Send voice message with audio file
+   */
+  async sendVoiceMessage(
+    senderId: number,
+    conversationId: number,
+    voiceUrl: string,
+    fileName: string,
+    fileSize: number,
+    duration: number,
+  ): Promise<Message> {
+    // Verify conversation exists and user is participant
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+      relations: ['sender', 'receiver'],
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    let receiverId: number;
+    if (conversation.senderId === senderId) {
+      receiverId = conversation.receiverId;
+    } else if (conversation.receiverId === senderId) {
+      receiverId = conversation.senderId;
+    } else {
+      throw new ForbiddenException('You are not part of this conversation');
+    }
+
+    // Create voice message
+    const message = this.messageRepository.create({
+      conversationId,
+      senderId,
+      receiverId,
+      content: '[Voice Message]',
+      messageType: MessageType.VOICE,
+      fileUrl: voiceUrl,
+      fileName,
+      fileSize,
+      duration,
     });
 
     await this.messageRepository.save(message);

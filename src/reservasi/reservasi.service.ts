@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Reservasi } from './entities/reservasi.entity';
 import { CreateReservasiDto, UpdateReservasiStatusDto } from './dto/create-reservasi.dto';
 import { ChatService } from '../chat/chat.service';
+import * as QRCode from 'qrcode';
 
 @Injectable()
 export class ReservasiService {
@@ -93,7 +94,7 @@ export class ReservasiService {
       throw new Error('Reservasi not found');
     }
 
-    // Jika status berubah ke 'approved', auto-create conversation
+    // Jika status berubah ke 'approved', auto-create conversation dan generate QR
     if (updateStatusDto.status === 'approved' && reservasi.status === 'pending') {
       try {
         // Create conversation
@@ -105,9 +106,27 @@ export class ReservasiService {
 
         // Save conversation ID ke reservasi
         reservasi.conversationId = conversation.id;
+
+        // Auto-generate QR code untuk tatap muka sessions
+        if (reservasi.type === 'tatap-muka') {
+          // Auto-assign room
+          const roomCount = await this.reservasiRepository.count({
+            where: { type: 'tatap-muka', status: 'approved' }
+          });
+          reservasi.room = `BK-${(roomCount % 3) + 1}`;
+
+          // Generate QR code
+          const qrData = JSON.stringify({
+            reservasiId: reservasi.id,
+            studentId: reservasi.studentId,
+            counselorId: reservasi.counselorId,
+            timestamp: new Date().toISOString(),
+          });
+          reservasi.qrCode = await QRCode.toDataURL(qrData);
+        }
       } catch (error) {
-        console.error('Error creating conversation:', error);
-        throw new Error('Failed to create chat conversation');
+        console.error('Error creating conversation or QR:', error);
+        throw new Error('Failed to create chat conversation or generate QR');
       }
     }
 
@@ -157,5 +176,150 @@ export class ReservasiService {
       .orderBy('reservasi.preferredDate', 'ASC')
       .addOrderBy('reservasi.preferredTime', 'ASC')
       .getMany();
+  }
+
+  // Reschedule reservasi - update date, time, dan/atau counselor
+  async reschedule(
+    id: number,
+    rescheduleData: {
+      preferredDate?: string;
+      preferredTime?: string;
+      counselorId?: number;
+    },
+  ) {
+    const reservasi = await this.findOne(id);
+    
+    if (!reservasi) {
+      throw new Error('Reservasi not found');
+    }
+
+    // Update fields jika disediakan
+    if (rescheduleData.preferredDate) {
+      reservasi.preferredDate = new Date(rescheduleData.preferredDate);
+    }
+    
+    if (rescheduleData.preferredTime) {
+      reservasi.preferredTime = rescheduleData.preferredTime;
+    }
+    
+    if (rescheduleData.counselorId) {
+      reservasi.counselorId = rescheduleData.counselorId;
+    }
+
+    // Keep status as 'pending' untuk pending dari counselor
+    reservasi.status = 'pending';
+
+    return await this.reservasiRepository.save(reservasi);
+  }
+
+  // Generate QR code untuk tatap muka session
+  async generateQRCode(id: number): Promise<string> {
+    const reservasi = await this.findOne(id);
+    
+    if (!reservasi) {
+      throw new Error('Reservasi not found');
+    }
+
+    if (reservasi.type !== 'tatap-muka') {
+      throw new Error('QR code hanya untuk sesi tatap muka');
+    }
+
+    // Generate QR code data dengan format: reservasi_id|student_id|counselor_id|timestamp
+    const qrData = JSON.stringify({
+      reservasiId: reservasi.id,
+      studentId: reservasi.studentId,
+      counselorId: reservasi.counselorId,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Generate QR code sebagai data URL
+    const qrCode = await QRCode.toDataURL(qrData);
+    
+    // Save QR code ke database
+    reservasi.qrCode = qrCode;
+    await this.reservasiRepository.save(reservasi);
+
+    return qrCode;
+  }
+
+  // Confirm attendance via QR scan
+  async confirmAttendance(id: number, qrData: string): Promise<Reservasi> {
+    const reservasi = await this.findOne(id);
+    
+    if (!reservasi) {
+      throw new Error('Reservasi not found');
+    }
+
+    if (reservasi.type !== 'tatap-muka') {
+      throw new Error('Attendance hanya untuk sesi tatap muka');
+    }
+
+    // Verify QR data
+    try {
+      const data = JSON.parse(qrData);
+      if (data.reservasiId !== id) {
+        throw new Error('QR code tidak sesuai dengan reservasi');
+      }
+    } catch (error) {
+      throw new Error('Invalid QR code');
+    }
+
+    // Update attendance status dan ubah status menjadi in_counseling
+    reservasi.attendanceConfirmed = true;
+    reservasi.status = 'in_counseling';
+    await this.reservasiRepository.save(reservasi);
+
+    // Update conversation status jika ada
+    if (reservasi.conversationId) {
+      await this.chatService.updateConversationStatus(reservasi.conversationId, 'in_counseling');
+    }
+
+    return reservasi;
+  }
+
+  // Mark reservasi sebagai selesai (hanya bisa dari status in_counseling)
+  async markAsCompleted(id: number): Promise<Reservasi> {
+    const reservasi = await this.findOne(id);
+    
+    if (!reservasi) {
+      throw new Error('Reservasi not found');
+    }
+
+    // Hanya bisa mark as completed jika status in_counseling atau approved (untuk chat sessions)
+    if (!['in_counseling', 'approved'].includes(reservasi.status)) {
+      throw new Error(`Cannot mark as completed from status ${reservasi.status}`);
+    }
+
+    reservasi.status = 'completed';
+    reservasi.completedAt = new Date();
+    const result = await this.reservasiRepository.save(reservasi);
+
+    // Update conversation status jika ada
+    if (reservasi.conversationId) {
+      await this.chatService.updateConversationStatus(reservasi.conversationId, 'completed');
+    }
+    
+    return result;
+  }
+
+  // Get room assignment untuk tatap muka (auto-generate atau manual)
+  async assignRoom(id: number, room?: string): Promise<Reservasi> {
+    const reservasi = await this.findOne(id);
+    
+    if (!reservasi) {
+      throw new Error('Reservasi not found');
+    }
+
+    // Auto-assign room jika tidak diberikan
+    if (!room) {
+      // Simple logic: BK-1, BK-2, BK-3, dst
+      const roomCount = await this.reservasiRepository.count({
+        where: { type: 'tatap-muka', status: 'approved' }
+      });
+      room = `BK-${(roomCount % 3) + 1}`; // Rotate between BK-1, BK-2, BK-3
+    }
+
+    reservasi.room = room;
+    return await this.reservasiRepository.save(reservasi);
   }
 }

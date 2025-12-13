@@ -30,8 +30,8 @@ export class CreateReservasiDto {
 }
 
 export class UpdateReservasiStatusDto {
-  @IsEnum(['approved', 'rejected', 'completed', 'cancelled'])
-  status: 'approved' | 'rejected' | 'completed' | 'cancelled';
+  @IsEnum(['approved', 'rejected', 'in_counseling', 'completed', 'cancelled'])
+  status: 'approved' | 'rejected' | 'in_counseling' | 'completed' | 'cancelled';
 
   @IsOptional()
   @IsString()
