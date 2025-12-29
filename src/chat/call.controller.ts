@@ -10,7 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { CallService } from './call.service';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateCallDto } from './dto/call.dto';
 
 @Controller('calls')

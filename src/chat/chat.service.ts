@@ -7,6 +7,7 @@ import { MessageReadStatus } from './entities/message-read-status.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ConversationDto } from './dto/conversation.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { ToxicFilterService } from '../toxic-filter/toxic-filter.service';
 
 @Injectable()
 export class ChatService {
@@ -17,6 +18,7 @@ export class ChatService {
     private messageRepository: Repository<Message>,
     @InjectRepository(MessageReadStatus)
     private messageReadStatusRepository: Repository<MessageReadStatus>,
+    private toxicFilterService: ToxicFilterService,
   ) {}
 
   /**
@@ -205,12 +207,34 @@ export class ChatService {
       throw new ForbiddenException('You are not part of this conversation');
     }
 
+    // Detect toxic content in message
+    let messageContent = content;
+    let isFlaggedAsToxic = false;
+    
+    if (messageType === 'text' && content) {
+      try {
+        const toxicResult = await this.toxicFilterService.detectToxic(content);
+        if (toxicResult.isToxic) {
+          isFlaggedAsToxic = true;
+          // Replace toxic words in the message
+          messageContent = toxicResult.filteredText;
+          
+          // If HIGH severity detected, still allow but flag it
+          // In future, could add logic to block completely
+          console.log(`[TOXIC CONTENT DETECTED] From user ${senderId}: ${toxicResult.foundWords.map(w => w.word).join(', ')}`);
+        }
+      } catch (error) {
+        console.error('Error checking toxic content:', error);
+        // Continue normally if toxic filter check fails
+      }
+    }
+
     // Create message
     const message = this.messageRepository.create({
       conversationId,
       senderId,
       receiverId,
-      content,
+      content: messageContent,
       messageType,
       ...(fileUrl && { fileUrl }),
       ...(fileName && { fileName }),
@@ -241,6 +265,11 @@ export class ChatService {
 
     if (!savedMessage) {
       throw new NotFoundException('Failed to retrieve saved message');
+    }
+
+    // Add flag to response (optional, for frontend awareness)
+    if (isFlaggedAsToxic) {
+      (savedMessage as any).isFlaggedAsToxic = true;
     }
 
     return savedMessage;
@@ -544,5 +573,14 @@ export class ChatService {
       { id: conversationId },
       { isActive: false },
     );
+  }
+
+  /**
+   * Get total message count in system
+   */
+  async getMessageCount(): Promise<number> {
+    return await this.messageRepository.count({
+      where: { isDeleted: false },
+    });
   }
 }

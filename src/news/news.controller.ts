@@ -10,7 +10,7 @@ import {
   Query,
   Put,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NewsService } from './news.service';
 import { CreateNewsDto, UpdateNewsDto, NewsQueryDto } from './dto/create-news.dto';
 

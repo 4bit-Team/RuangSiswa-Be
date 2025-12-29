@@ -94,6 +94,28 @@ export class RateLimiter {
   }
 
   /**
+   * Manually unblock user (for admin/debugging)
+   * Handles both number and string userId
+   */
+  unblockUser(userId: number | string): boolean {
+    const userIdNum = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+    console.log(`[RateLimiter] 🔍 Attempting to unblock user ${userIdNum}`);
+    console.log(`[RateLimiter] - Input userId: "${userId}" (type: ${typeof userId}), Converted to: ${userIdNum} (type: ${typeof userIdNum})`);
+    console.log(`[RateLimiter] - Current blocked users: ${Array.from(this.blockedUsers.keys()).join(', ') || '(none)'}`);
+    console.log(`[RateLimiter] - Has user ${userIdNum}? ${this.blockedUsers.has(userIdNum)}`);
+    
+    if (this.blockedUsers.has(userIdNum)) {
+      this.blockedUsers.delete(userIdNum);
+      console.log(`✅ [RateLimiter] User ${userIdNum} unblocked from BLOCKED list`);
+      console.log(`[RateLimiter] - Remaining blocked: ${Array.from(this.blockedUsers.keys()).join(', ') || '(none)'}`);
+      return true;
+    }
+    
+    console.log(`❌ [RateLimiter] User ${userIdNum} NOT found in blocked list`);
+    return false;
+  }
+
+  /**
    * Get user stats
    */
   getStats(identifier: string) {
@@ -143,6 +165,36 @@ export class RateLimiter {
     this.limits.clear();
     this.blockedUsers.clear();
   }
+
+  /**
+   * Get list of currently blocked users
+   */
+  getBlockedUsers(): Array<{
+    userId: number;
+    reason: string;
+    blockedUntil: number;
+    remainingMs: number;
+  }> {
+    const now = Date.now();
+    const result: Array<{
+      userId: number;
+      reason: string;
+      blockedUntil: number;
+      remainingMs: number;
+    }> = [];
+
+    this.blockedUsers.forEach((block, userId) => {
+      const remainingMs = Math.max(0, block.until - now);
+      result.push({
+        userId,
+        reason: block.reason,
+        blockedUntil: block.until,
+        remainingMs,
+      });
+    });
+
+    return result;
+  }
 }
 
 /**
@@ -170,6 +222,14 @@ export class IceCandidateSpamDetector {
 
     // Create or reset expired record
     if (!record || now - record.timestamp > 60000) {
+      console.log(`[IceSpamDetector] Resetting user ${userId} spam count (>60s elapsed)`);
+      
+      // Also remove from suspicious list when counter resets
+      if (this.suspiciousUsers.has(userId)) {
+        console.log(`[IceSpamDetector] Removing user ${userId} from suspicious list (counter reset)`);
+        this.suspiciousUsers.delete(userId);
+      }
+      
       record = {
         callId,
         count: 0,
@@ -213,6 +273,28 @@ export class IceCandidateSpamDetector {
   }
 
   /**
+   * Manually unblock user (for admin/debugging)
+   * Handles both number and string userId
+   */
+  unblockUser(userId: number | string): boolean {
+    const userIdNum = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+    console.log(`[IceSpamDetector] 🔍 Attempting to unblock user ${userIdNum}`);
+    console.log(`[IceSpamDetector] - Input userId: "${userId}" (type: ${typeof userId}), Converted to: ${userIdNum} (type: ${typeof userIdNum})`);
+    console.log(`[IceSpamDetector] - Current suspicious users: ${Array.from(this.suspiciousUsers).join(', ') || '(none)'}`);
+    console.log(`[IceSpamDetector] - Has user ${userIdNum}? ${this.suspiciousUsers.has(userIdNum)}`);
+    
+    if (this.suspiciousUsers.has(userIdNum)) {
+      this.suspiciousUsers.delete(userIdNum);
+      console.log(`✅ [IceSpamDetector] User ${userIdNum} unblocked from SUSPICIOUS list`);
+      console.log(`[IceSpamDetector] - Remaining suspicious: ${Array.from(this.suspiciousUsers).join(', ') || '(none)'}`);
+      return true;
+    }
+    
+    console.log(`❌ [IceSpamDetector] User ${userIdNum} NOT found in suspicious list`);
+    return false;
+  }
+
+  /**
    * Get spam stats
    */
   getStats(userId: number) {
@@ -230,5 +312,32 @@ export class IceCandidateSpamDetector {
   reset() {
     this.userCandidateCounts.clear();
     this.suspiciousUsers.clear();
+  }
+
+  /**
+   * Get list of suspicious users
+   */
+  getSuspiciousUsers(): Array<{
+    userId: number;
+    candidateCount: number;
+  }> {
+    const result: Array<{
+      userId: number;
+      candidateCount: number;
+    }> = [];
+
+    console.log(`[IceSpamDetector] getSuspiciousUsers() - Current set size: ${this.suspiciousUsers.size}`);
+    console.log(`[IceSpamDetector] getSuspiciousUsers() - Users in set: ${Array.from(this.suspiciousUsers).join(', ')}`);
+
+    this.suspiciousUsers.forEach((userId) => {
+      const record = this.userCandidateCounts.get(userId);
+      console.log(`[IceSpamDetector] - User ${userId}: count=${record?.count || 0}, timestamp=${record?.timestamp}`);
+      result.push({
+        userId,
+        candidateCount: record?.count || 0,
+      });
+    });
+
+    return result;
   }
 }

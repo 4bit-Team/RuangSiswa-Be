@@ -19,16 +19,25 @@ interface AuthenticatedSocket extends Socket {
   userId: number;
 }
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'https://ruangsiswa.my.id',
+  'http://ruangsiswa.my.id',
+];
+
 /**
  * Call Gateway - Handles all WebRTC call signaling
  * Separate from ChatGateway for better performance and maintainability
  */
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
   namespace: '/call',
+  pingInterval: 25000,
+  pingTimeout: 5000,
 })
 @Injectable()
 export class CallGateway
@@ -69,10 +78,26 @@ export class CallGateway
   }
 
   /**
+   * Get JWT secret from environment
+   */
+  private getJwtSecret(): string {
+    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    if (!secret || secret === 'your-secret-key') {
+      console.warn('[Call] ⚠️ WARNING: Using default JWT secret. Set JWT_SECRET environment variable!');
+    }
+    return secret;
+  }
+
+  /**
    * Lifecycle hook - called when gateway is initialized
    */
   afterInit() {
     console.log('[WebSocket] Call gateway initialized');
+    
+    // Set up global error handlers
+    this.server.on('error', (error) => {
+      console.error('[Call] Server error:', error);
+    });
   }
 
   /**
@@ -88,9 +113,18 @@ export class CallGateway
         return;
       }
 
-      // Verify JWT token
-      const payload = this.jwtService.verify(token);
-      console.log('[Call] JWT Payload:', payload);
+      // Verify JWT token with secret
+      let payload: any;
+      try {
+        payload = this.jwtService.verify(token, {
+          secret: this.getJwtSecret(),
+        });
+        console.log('[Call] JWT Payload:', payload);
+      } catch (jwtError: any) {
+        console.error('[Call] JWT verification error:', jwtError.message);
+        client.disconnect();
+        return;
+      }
       
       client.userId = payload.id || payload.sub || payload.userId;
       
@@ -107,7 +141,7 @@ export class CallGateway
         `[Call] User ${client.userId} connected with socket ${client.id}`,
       );
     } catch (error) {
-      console.error('[Call] Authentication failed:', error.message);
+      console.error('[Call] Authentication failed:', error instanceof Error ? error.message : String(error));
       client.disconnect();
     }
   }
@@ -116,8 +150,19 @@ export class CallGateway
    * Handle client disconnection
    */
   handleDisconnect(client: AuthenticatedSocket) {
-    this.onlineUsers.delete(client.userId);
-    console.log(`[Call] User ${client.userId} disconnected`);
+    if (client.userId) {
+      this.onlineUsers.delete(client.userId);
+      console.log(`[Call] User ${client.userId} disconnected from /call namespace`);
+    } else {
+      console.warn(`[Call] Unknown user disconnected`);
+    }
+  }
+
+  /**
+   * Handle connection errors
+   */
+  handleError(client: AuthenticatedSocket, error: any) {
+    console.error(`[Call] Connection error for user ${client.userId}:`, error);
   }
 
   /**
@@ -168,12 +213,13 @@ export class CallGateway
 
       console.log(`[Call] Call initiated: ${client.userId} → ${data.receiverId}, callId: ${call.id}`);
 
+      // ✅ CRITICAL: Send offer immediately with call-incoming event
       this.notifyUser(data.receiverId, 'call-incoming', {
         callId: call.id,
         callType: call.callType,
         callerId: client.userId,
         callerName: 'Caller',
-        offer: data.offer,
+        offer: data.offer, // ✅ Include offer immediately
         timestamp: new Date(),
       });
 
@@ -238,6 +284,12 @@ export class CallGateway
         data.callId,
         data.answer,
       );
+
+      // ✅ CRITICAL: Check if answer already sent to prevent duplicate
+      if (call.receiverAnswer && call.receiverAnswer !== data.answer) {
+        console.warn(`[Call] ⚠️ Answer already processed for call ${data.callId}, ignoring duplicate`);
+        return { status: 'accepted' };
+      }
 
       // Send answer back to caller
       this.notifyUser(call.callerId, 'call-answer', {
@@ -519,5 +571,79 @@ export class CallGateway
     } else {
       console.warn(`[Call] User ${userId} is not online, cannot send '${event}'`);
     }
+  }
+
+  /**
+   * ✅ DEBUG ENDPOINT: Unblock user from rate limiting
+   * Usage: socket.emit('debug:unblock-user', { userId }, (response) => { ... })
+   */
+  @SubscribeMessage('debug:unblock-user')
+  handleUnblockUser(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() data: { userId: number },
+  ) {
+    try {
+      // Unblock from ICE rate limiter
+      const unblockedIce = this.iceLimiter.unblockUser(data.userId);
+      
+      // Unblock from ICE spam detector
+      const unblockedSpam = this.spamDetector.unblockUser(data.userId);
+      
+      // Unblock from general call rate limiter
+      const unblockedCall = this.callLimiter.unblockUser(data.userId);
+
+      console.log(
+        `🔓 [Call] Debug unblock requested by user ${client.userId} for user ${data.userId}`,
+        { unblockedIce, unblockedSpam, unblockedCall },
+      );
+
+      return {
+        status: 'success',
+        message: `User ${data.userId} unblocked`,
+        unblocked: {
+          ice: unblockedIce,
+          spam: unblockedSpam,
+          call: unblockedCall,
+        },
+      };
+    } catch (error) {
+      console.error('[Call] Error unblocking user:', error.message);
+      return { status: 'error', message: error.message };
+    }
+  }
+
+  /**
+   * Get list of blocked users (for admin API)
+   */
+  getBlockedUsers() {
+    return this.callLimiter.getBlockedUsers();
+  }
+
+  /**
+   * Get list of suspicious users (for admin API)
+   */
+  getSuspiciousUsers() {
+    return this.spamDetector.getSuspiciousUsers();
+  }
+
+  /**
+   * Unblock user via admin API
+   * Handles BOTH blocked users (from callLimiter) and suspicious users (from spamDetector)
+   */
+  unblockUserAdmin(userId: number | string): boolean {
+    const userIdNum = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+    console.log(`[CallGateway] 🔓 unblockUserAdmin called for user ${userIdNum}`);
+    
+    const unblockedCall = this.callLimiter.unblockUser(userIdNum);
+    console.log(`[CallGateway] - callLimiter.unblockUser (BLOCKED list): ${unblockedCall}`);
+    
+    const unblockedSpam = this.spamDetector.unblockUser(userIdNum);
+    console.log(`[CallGateway] - spamDetector.unblockUser (SUSPICIOUS list): ${unblockedSpam}`);
+    
+    const result = unblockedCall || unblockedSpam;
+    console.log(`[CallGateway] - Final result (either list unblocked): ${result}`);
+    console.log(`[CallGateway] ✅ User ${userIdNum} handled. Unblocked from ${unblockedCall ? 'BLOCKED' : ''} ${unblockedSpam ? 'SUSPICIOUS' : ''} ${!result ? 'NEITHER (already unblocked)' : ''}`);
+    
+    return result;
   }
 }

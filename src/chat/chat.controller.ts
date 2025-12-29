@@ -20,7 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
 import * as path from 'path';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -200,6 +200,16 @@ export class ChatController {
   @Get('unread-by-conversation')
   async getUnreadByConversation(@Request() req) {
     return await this.chatService.getUnreadByConversation(req.user.id);
+  }
+
+  /**
+   * GET /chat/count
+   * Get total message count
+   */
+  @Get('count')
+  async getMessageCount() {
+    const count = await this.chatService.getMessageCount();
+    return { count };
   }
 
   /**

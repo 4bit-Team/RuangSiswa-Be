@@ -20,12 +20,21 @@ interface AuthenticatedSocket extends Socket {
   userId: number;
 }
 
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'https://ruangsiswa.my.id',
+  'http://ruangsiswa.my.id',
+];
+
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: ALLOWED_ORIGINS,
     methods: ['GET', 'POST'],
+    credentials: true,
   },
   namespace: '/chat',
+  pingInterval: 25000,
+  pingTimeout: 5000,
 })
 @Injectable()
 export class ChatGateway
@@ -54,10 +63,26 @@ export class ChatGateway
   }
 
   /**
+   * Get JWT secret from environment
+   */
+  private getJwtSecret(): string {
+    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    if (!secret || secret === 'your-secret-key') {
+      console.warn('[WebSocket] ⚠️ WARNING: Using default JWT secret. Set JWT_SECRET environment variable!');
+    }
+    return secret;
+  }
+
+  /**
    * Lifecycle hook - called when gateway is initialized
    */
   afterInit() {
     console.log('[WebSocket] Chat gateway initialized');
+    
+    // Set up global error handlers
+    this.server.on('error', (error) => {
+      console.error('[Chat] Server error:', error);
+    });
   }
 
   /**
@@ -73,9 +98,18 @@ export class ChatGateway
         return;
       }
 
-      // Verify JWT token
-      const payload = this.jwtService.verify(token);
-      console.log('[WebSocket] JWT Payload:', payload);
+      // Verify JWT token with secret
+      let payload: any;
+      try {
+        payload = this.jwtService.verify(token, {
+          secret: this.getJwtSecret(),
+        });
+        console.log('[WebSocket] JWT Payload:', payload);
+      } catch (jwtError: any) {
+        console.error('[WebSocket] JWT verification error:', jwtError.message);
+        client.disconnect();
+        return;
+      }
       
       client.userId = payload.id || payload.sub || payload.userId;
       
@@ -102,7 +136,7 @@ export class ChatGateway
       // Join user to personal room (for direct messaging)
       client.join(`user-${client.userId}`);
     } catch (error) {
-      console.error('[WebSocket] Authentication failed:', error.message);
+      console.error('[WebSocket] Authentication failed:', error instanceof Error ? error.message : String(error));
       client.disconnect();
     }
   }
@@ -111,15 +145,26 @@ export class ChatGateway
    * Handle client disconnection
    */
   handleDisconnect(client: AuthenticatedSocket) {
-    this.onlineUsers.delete(client.userId);
+    if (client.userId) {
+      this.onlineUsers.delete(client.userId);
 
-    // Notify all clients about user going offline
-    this.server.emit('user-offline', {
-      userId: client.userId,
-      timestamp: new Date(),
-    });
+      // Notify all clients about user going offline
+      this.server.emit('user-offline', {
+        userId: client.userId,
+        timestamp: new Date(),
+      });
 
-    console.log(`[WebSocket] User ${client.userId} disconnected`);
+      console.log(`[WebSocket] User ${client.userId} disconnected from /chat namespace`);
+    } else {
+      console.warn(`[WebSocket] Unknown user disconnected`);
+    }
+  }
+
+  /**
+   * Handle connection errors
+   */
+  handleError(client: AuthenticatedSocket, error: any) {
+    console.error(`[WebSocket] Connection error for user ${client.userId}:`, error);
   }
 
   /**

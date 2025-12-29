@@ -15,7 +15,7 @@ import {
 } from '@nestjs/common';
 import { ReservasiService } from './reservasi.service';
 import { CreateReservasiDto, UpdateReservasiStatusDto } from './dto/create-reservasi.dto';
-import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 

@@ -91,4 +91,31 @@ export class UsersService {
       relations: ['kelas', 'jurusan'], 
     });
   }
+
+  // Get count of users by role
+  async getCountByRole() {
+    const counts = await this.userRepo
+      .createQueryBuilder('user')
+      .select('user.role', 'role')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('user.role')
+      .getRawMany();
+
+    // Transform hasil query ke object dengan key role
+    const result = {
+      total: 0,
+      siswa: 0,
+      bk: 0,
+      kesiswaan: 0,
+      admin: 0,
+    };
+
+    counts.forEach((item: any) => {
+      const count = parseInt(item.count, 10);
+      result[item.role] = count;
+      result.total += count;
+    });
+
+    return result;
+  }
 }

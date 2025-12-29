@@ -14,6 +14,9 @@ import { ReservasiModule } from './reservasi/reservasi.module';
 import { BkScheduleModule } from './bk-schedule/bk-schedule.module';
 import { NewsModule } from './news/news.module';
 import { UploadModule } from './upload/upload.module';
+import { AdminModule } from './admin/admin.module';
+import { EmojiModule } from './emoji/emoji.module';
+import { ToxicFilterModule } from './toxic-filter/toxic-filter.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -70,6 +73,9 @@ import * as path from 'path';
   BkScheduleModule,
   NewsModule,
   UploadModule,
+  AdminModule,
+  EmojiModule,
+  ToxicFilterModule,
   ],
 })
 export class AppModule {}

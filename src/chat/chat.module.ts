@@ -11,6 +11,7 @@ import { Conversation } from './entities/conversation.entity';
 import { Message } from './entities/message.entity';
 import { MessageReadStatus } from './entities/message-read-status.entity';
 import { Call } from './entities/call.entity';
+import { ToxicFilterModule } from '../toxic-filter/toxic-filter.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { Call } from './entities/call.entity';
       secret: process.env.JWT_SECRET || 'your-secret-key',
       signOptions: { expiresIn: '24h' },
     }),
+    ToxicFilterModule,
   ],
   providers: [ChatService, CallService, ChatGateway, CallGateway],
   controllers: [ChatController, CallController],

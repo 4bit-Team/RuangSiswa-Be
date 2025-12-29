@@ -107,6 +107,12 @@ export class ReservasiService {
         // Save conversation ID ke reservasi
         reservasi.conversationId = conversation.id;
 
+        // Reset conversation status ke 'active' jika sebelumnya 'completed'
+        if (conversation.status === 'completed') {
+          await this.chatService.updateConversationStatus(conversation.id, 'active');
+          console.log(`✅ Reset conversation ${conversation.id} status dari 'completed' ke 'active'`);
+        }
+
         // Auto-generate QR code untuk tatap muka sessions
         if (reservasi.type === 'tatap-muka') {
           // Auto-assign room
