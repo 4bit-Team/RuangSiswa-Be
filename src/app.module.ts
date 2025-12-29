@@ -17,6 +17,7 @@ import { UploadModule } from './upload/upload.module';
 import { AdminModule } from './admin/admin.module';
 import { EmojiModule } from './emoji/emoji.module';
 import { ToxicFilterModule } from './toxic-filter/toxic-filter.module';
+import { KonsultasiModule } from './konsultasi/konsultasi.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -76,6 +77,7 @@ import * as path from 'path';
   AdminModule,
   EmojiModule,
   ToxicFilterModule,
+  KonsultasiModule,
   ],
 })
 export class AppModule {}

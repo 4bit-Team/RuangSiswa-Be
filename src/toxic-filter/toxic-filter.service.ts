@@ -86,6 +86,12 @@ export class ToxicFilterService {
     return result.hasSevere;
   }
 
+  // Filter text and return only the filtered result
+  async filterText(text: string): Promise<string> {
+    const result = await this.detectToxic(text);
+    return result.filteredText;
+  }
+
   // Escape special regex characters
   private escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
