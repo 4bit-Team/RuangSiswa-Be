@@ -18,6 +18,7 @@ import { AdminModule } from './admin/admin.module';
 import { EmojiModule } from './emoji/emoji.module';
 import { ToxicFilterModule } from './toxic-filter/toxic-filter.module';
 import { KonsultasiModule } from './konsultasi/konsultasi.module';
+import { LaporanBkModule } from './laporan-bk/laporan-bk.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -78,6 +79,7 @@ import * as path from 'path';
   EmojiModule,
   ToxicFilterModule,
   KonsultasiModule,
+  LaporanBkModule,
   ],
 })
 export class AppModule {}
