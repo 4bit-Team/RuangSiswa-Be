@@ -12,6 +12,7 @@ import { LoggerModule } from './logger/logger.module';
 import { ChatModule } from './chat/chat.module';
 import { ReservasiModule } from './reservasi/reservasi.module';
 import { BkScheduleModule } from './bk-schedule/bk-schedule.module';
+import { BkJurusanModule } from './bk-jurusan/bk-jurusan.module';
 import { NewsModule } from './news/news.module';
 import { UploadModule } from './upload/upload.module';
 import { AdminModule } from './admin/admin.module';
@@ -72,6 +73,7 @@ import * as path from 'path';
   ChatModule,
   ReservasiModule,
   BkScheduleModule,
+  BkJurusanModule,
   NewsModule,
   UploadModule,
   AdminModule,
