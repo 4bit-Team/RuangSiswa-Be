@@ -44,4 +44,21 @@ export class UsersController {
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
   }
+
+  // Get students by jurusan IDs
+  @Get('students/by-jurusan')
+  @UseGuards(JwtAuthGuard)
+  async getStudentsByJurusan(@Query('jurusanIds') jurusanIds: string) {
+    if (!jurusanIds) {
+      return [];
+    }
+    // Parse comma-separated or JSON array format
+    let ids: number[] = [];
+    try {
+      ids = JSON.parse(jurusanIds);
+    } catch {
+      ids = jurusanIds.split(',').map((id) => parseInt(id, 10)).filter(id => !isNaN(id));
+    }
+    return await this.usersService.getStudentsByJurusanIdsAdvanced(ids);
+  }
 }

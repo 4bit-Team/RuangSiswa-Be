@@ -92,7 +92,38 @@ export class UsersService {
     });
   }
 
-  // Get count of users by role
+  // Get all students (siswa) filtered by jurusan IDs
+  async getStudentsByJurusanIds(jurusanIds: number[]) {
+    if (!jurusanIds || jurusanIds.length === 0) {
+      return [];
+    }
+
+    return await this.userRepo.find({
+      where: {
+        role: 'siswa',
+        jurusan: { id: jurusanIds[0] } as any, // TypeORM limitation - we'll use query builder for multiple IDs
+      },
+      relations: ['jurusan', 'kelas'],
+    });
+  }
+
+  // Get all students filtered by jurusan IDs (using query builder for multiple IDs)
+  async getStudentsByJurusanIdsAdvanced(jurusanIds: number[]) {
+    if (!jurusanIds || jurusanIds.length === 0) {
+      return [];
+    }
+
+    return await this.userRepo
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.jurusan', 'jurusan')
+      .leftJoinAndSelect('user.kelas', 'kelas')
+      .where('user.role = :role', { role: 'siswa' })
+      .andWhere('user.jurusanId IN (:...jurusanIds)', { jurusanIds })
+      .orderBy('user.fullName', 'ASC')
+      .getMany();
+  }
+
+  // Get count by role
   async getCountByRole() {
     const counts = await this.userRepo
       .createQueryBuilder('user')
