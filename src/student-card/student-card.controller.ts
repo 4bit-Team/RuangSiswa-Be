@@ -129,6 +129,11 @@ export class StudentCardController {
       }));
   }
 
+  @Get('by-user/:userId')
+  async findByUserId(@Param('userId') userId: string) {
+    return await this.cardService.findByUserId(+userId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.cardService.findOne(+id);

@@ -67,6 +67,10 @@ export class LaporanBkExcelService {
     const worksheet = workbook.getWorksheet('Laporan BK');
     const data: any[] = [];
 
+    if (!worksheet) {
+      throw new Error('Worksheet not found');
+    }
+
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1) return; // Skip header
 
@@ -127,7 +131,7 @@ export class LaporanBkExcelService {
     const headerRow = worksheet.addRow(headers);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } };
-    headerRow.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
   }
 
   private addSampleRow(worksheet: Worksheet) {

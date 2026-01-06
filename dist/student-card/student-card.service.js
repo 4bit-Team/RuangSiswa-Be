@@ -49,6 +49,9 @@ let StudentCardService = class StudentCardService {
             throw new common_1.NotFoundException(`Student card #${id} not found`);
         return card;
     }
+    async findByUserId(userId) {
+        return await this.cardRepo.findOne({ where: { user: { id: userId } }, relations: ['user'] });
+    }
     async update(id, updateDto) {
         const card = await this.findOne(id);
         if (updateDto.file_path) {

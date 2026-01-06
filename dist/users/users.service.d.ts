@@ -14,6 +14,8 @@ export declare class UsersService {
     update(id: number, updateUserDto: UpdateUserDto): Promise<User | null>;
     remove(id: number): Promise<User | null>;
     findOneByEmail(email: string): Promise<User | null>;
+    getStudentsByJurusanIds(jurusanIds: number[]): Promise<User[]>;
+    getStudentsByJurusanIdsAdvanced(jurusanIds: number[]): Promise<User[]>;
     getCountByRole(): Promise<{
         total: number;
         siswa: number;

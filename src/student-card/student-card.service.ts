@@ -14,24 +14,23 @@ export class StudentCardService {
     private readonly usersService: UsersService,
   ) {}
 
-  // ✅ Fixed create method
   async create(createDto: CreateStudentCardDto & { userId: number }) {
     console.log('📩 [StudentCardService] Create DTO diterima:', createDto);
 
-    // 1️⃣ Cek user valid
+    // Cek user valid
     const user = await this.usersService.findOne(createDto.userId);
     if (!user) throw new NotFoundException(`User #${createDto.userId} not found`);
 
-    // 2️⃣ Buat entity card dengan type casting agar aman untuk TypeORM
+    // Buat entity card dengan type casting agar aman untuk TypeORM
     const card = this.cardRepo.create({
-      user: user as any, // ✅ cast agar DeepPartial cocok
+      user: user as any, // cast agar DeepPartial cocok
       file_path: createDto.file_path,
-      extracted_data: createDto.extracted_data ?? undefined, // ✅ undefined, bukan null
+      extracted_data: createDto.extracted_data ?? undefined, // undefined, bukan null
     });
 
     console.log('💾 [StudentCardService] Akan disimpan ke DB:', card);
 
-    // 3️⃣ Simpan ke DB
+    // Simpan ke DB
     const saved = await this.cardRepo.save(card);
     console.log('✅ [StudentCardService] Berhasil disimpan:', saved);
     return saved;
@@ -47,9 +46,13 @@ export class StudentCardService {
     return card;
   }
 
+  async findByUserId(userId: number) {
+    return await this.cardRepo.findOne({ where: { user: { id: userId } }, relations: ['user'] });
+  }
+
   async update(id: number, updateDto: UpdateStudentCardDto) {
     const card = await this.findOne(id);
-    if (updateDto.file_path) {
+    if (updateDto.file_path) {  
       card.file_path = updateDto.file_path;
     }
     return this.cardRepo.save(card);

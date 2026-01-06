@@ -56,6 +56,12 @@ export class ReservasiController {
     return await this.reservasiService.findByStudentId(studentId);
   }
 
+  // Get reservasi by student ID
+  @Get('student/:studentId')
+  async getByStudentId(@Param('studentId') studentId: string) {
+    return await this.reservasiService.findByStudentId(parseInt(studentId));
+  }
+
   // Get pending reservasi untuk counselor
   @Get('counselor/pending')
   async getPendingReservations(@Request() req) {

@@ -92,6 +92,31 @@ let UsersService = class UsersService {
             relations: ['kelas', 'jurusan'],
         });
     }
+    async getStudentsByJurusanIds(jurusanIds) {
+        if (!jurusanIds || jurusanIds.length === 0) {
+            return [];
+        }
+        return await this.userRepo.find({
+            where: {
+                role: 'siswa',
+                jurusan: { id: jurusanIds[0] },
+            },
+            relations: ['jurusan', 'kelas'],
+        });
+    }
+    async getStudentsByJurusanIdsAdvanced(jurusanIds) {
+        if (!jurusanIds || jurusanIds.length === 0) {
+            return [];
+        }
+        return await this.userRepo
+            .createQueryBuilder('user')
+            .leftJoinAndSelect('user.jurusan', 'jurusan')
+            .leftJoinAndSelect('user.kelas', 'kelas')
+            .where('user.role = :role', { role: 'siswa' })
+            .andWhere('user.jurusanId IN (:...jurusanIds)', { jurusanIds })
+            .orderBy('user.fullName', 'ASC')
+            .getMany();
+    }
     async getCountByRole() {
         const counts = await this.userRepo
             .createQueryBuilder('user')

@@ -12,6 +12,7 @@ export declare class StudentCardService {
     }): Promise<StudentCard>;
     findAll(): Promise<StudentCard[]>;
     findOne(id: number): Promise<StudentCard>;
+    findByUserId(userId: number): Promise<StudentCard | null>;
     update(id: number, updateDto: UpdateStudentCardDto): Promise<StudentCard>;
     remove(id: number): Promise<StudentCard>;
 }
