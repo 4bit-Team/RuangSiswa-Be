@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsIn, IsOptional, IsArray, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, IsBoolean, IsNumber } from 'class-validator';
 
 export class CreateKonsultasiDto {
   @IsString()
@@ -9,10 +9,14 @@ export class CreateKonsultasiDto {
   @IsNotEmpty()
   content: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @IsIn(['personal', 'academic', 'social', 'development'])
-  category: string;
+  // @IsString()
+  // @IsNotEmpty()
+  // @IsIn(['personal', 'academic', 'social', 'development'])
+  // category: string;
+
+  @IsNumber()
+  @IsOptional()
+  categoryId?: number;
 
   @IsArray()
   @IsString({ each: true })

@@ -1,4 +1,11 @@
-import { IsNumber, IsString, IsArray, IsBoolean, IsOptional, IsEnum } from 'class-validator';
+import { IsNumber, IsString, IsArray, IsBoolean, IsOptional, IsEnum, IsObject } from 'class-validator';
+
+export interface DaySchedule {
+  day: string;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+}
 
 export class CreateBkScheduleDto {
   @IsNumber()
@@ -7,14 +14,8 @@ export class CreateBkScheduleDto {
   @IsEnum(['tatap-muka', 'chat'])
   sessionType: 'tatap-muka' | 'chat'; // Tipe sesi
 
-  @IsString()
-  startTime: string; // HH:MM format
-
-  @IsString()
-  endTime: string; // HH:MM format
-
   @IsArray()
-  availableDays: string[]; // ['Monday', 'Tuesday', etc]
+  daySchedules: DaySchedule[]; // Array of day-specific schedules
 
   @IsOptional()
   @IsBoolean()
@@ -27,16 +28,8 @@ export class UpdateBkScheduleDto {
   sessionType?: 'tatap-muka' | 'chat';
 
   @IsOptional()
-  @IsString()
-  startTime?: string;
-
-  @IsOptional()
-  @IsString()
-  endTime?: string;
-
-  @IsOptional()
   @IsArray()
-  availableDays?: string[];
+  daySchedules?: DaySchedule[];
 
   @IsOptional()
   @IsBoolean()

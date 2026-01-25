@@ -7,7 +7,7 @@ import { Message } from '../../chat/entities/message.entity';
 import { Call } from '../../chat/entities/call.entity';
 import { News } from '../../news/entities/news.entity';
 
-export type UserRole = 'kesiswaan' | 'siswa' | 'admin' | 'bk';
+export type UserRole = 'kesiswaan' | 'siswa' | 'admin' | 'bk' | 'kakom' | 'orang_tua';
 export type UserStatus = 'aktif' | 'nonaktif';
 
 @Entity('users')
@@ -27,7 +27,7 @@ export class User {
   @Column()
   password: string;
 
-  @Column({ type: 'enum', enum: ['kesiswaan', 'siswa', 'admin', 'bk'], default: 'siswa' })
+  @Column({ type: 'enum', enum: ['kesiswaan', 'siswa', 'admin', 'bk', 'kakom', 'orang_tua'], default: 'siswa' })
   role: UserRole;
 
   @Column({ type: 'enum', enum: ['aktif', 'nonaktif'], default: 'aktif' })

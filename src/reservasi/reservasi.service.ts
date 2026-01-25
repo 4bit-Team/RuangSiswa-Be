@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Reservasi } from './entities/reservasi.entity';
 import { CreateReservasiDto, UpdateReservasiStatusDto } from './dto/create-reservasi.dto';
+import { CounselingCategory } from '../counseling-category/entities/counseling-category.entity';
 import { ChatService } from '../chat/chat.service';
 import * as QRCode from 'qrcode';
 
@@ -11,12 +12,36 @@ export class ReservasiService {
   constructor(
     @InjectRepository(Reservasi)
     private reservasiRepository: Repository<Reservasi>,
+    @InjectRepository(CounselingCategory)
+    private categoryRepository: Repository<CounselingCategory>,
     private chatService: ChatService,
   ) {}
 
   // Create reservasi baru
   async create(createReservasiDto: CreateReservasiDto) {
-    const reservasi = this.reservasiRepository.create(createReservasiDto);
+    // Load topic category if provided
+    let topic: CounselingCategory | null = null;
+    if (createReservasiDto.topicId) {
+      topic = await this.categoryRepository.findOne({
+        where: { id: Number(createReservasiDto.topicId) },
+      });
+
+      if (!topic) {
+        throw new BadRequestException('Topik konseling tidak ditemukan');
+      }
+    }
+
+    const reservasi = this.reservasiRepository.create({
+      studentId: createReservasiDto.studentId,
+      counselorId: createReservasiDto.counselorId,
+      preferredDate: createReservasiDto.preferredDate,
+      preferredTime: createReservasiDto.preferredTime,
+      notes: createReservasiDto.notes,
+      topicId: createReservasiDto.topicId,
+      ...(topic && { topic }),
+      status: 'pending',
+    });
+
     return await this.reservasiRepository.save(reservasi);
   }
 
@@ -31,7 +56,8 @@ export class ReservasiService {
     let query = this.reservasiRepository
       .createQueryBuilder('reservasi')
       .leftJoinAndSelect('reservasi.student', 'student')
-      .leftJoinAndSelect('reservasi.counselor', 'counselor');
+      .leftJoinAndSelect('reservasi.counselor', 'counselor')
+      .leftJoinAndSelect('reservasi.topic', 'topic');
 
     if (filters?.studentId) {
       query = query.where('reservasi.studentId = :studentId', { studentId: filters.studentId });

@@ -63,7 +63,7 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'enum', enum: ['kesiswaan', 'siswa', 'admin', 'bk'], default: 'siswa' }),
+    (0, typeorm_1.Column)({ type: 'enum', enum: ['kesiswaan', 'siswa', 'admin', 'bk', 'kakom', 'orang_tua'], default: 'siswa' }),
     __metadata("design:type", String)
 ], User.prototype, "role", void 0);
 __decorate([

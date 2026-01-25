@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, Index, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { KonsultasiAnswer } from './konsultasi-answer.entity';
+import { ConsultationCategory } from '../../consultation-category/entities/consultation-category.entity';
 
 @Entity('konsultasi')
 @Index('idx_konsultasi_category', ['category'])
@@ -16,11 +17,18 @@ export class Konsultasi {
   @Column('text')
   content: string;
 
-  @Column({
-    type: 'enum',
-    enum: ['personal', 'academic', 'social', 'development'],
-  })
-  category: string;
+  // @Column({
+  //   type: 'enum',
+  //   enum: ['personal', 'academic', 'social', 'development'],
+  // })
+  // category: string;
+
+  @ManyToOne(() => ConsultationCategory, { eager: true })
+  @JoinColumn({ name: 'categoryId' })
+  category: ConsultationCategory;
+
+  @Column()
+  categoryId: number;
 
   @Column('uuid')
   authorId: string;

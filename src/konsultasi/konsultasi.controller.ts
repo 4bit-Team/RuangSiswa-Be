@@ -18,6 +18,12 @@ export class KonsultasiController {
     return this.konsultasiService.getStatistics();
   }
 
+  // Get question by slug - MUST be before /:id route
+  @Get('slug/:slug')
+  async getQuestionBySlug(@Param('slug') slug: string) {
+    return this.konsultasiService.findOneBySlug(slug);
+  }
+
   // Get all questions with filtering and pagination
   @Get()
   async getAllQuestions(
@@ -125,5 +131,42 @@ export class KonsultasiController {
   @UseGuards(JwtAuthGuard)
   async filterToxic(@Param('id') id: string) {
     return this.konsultasiService.applyToxicFilter(id);
+  }
+
+  // Bookmark question
+  @Post(':id/bookmark')
+  @UseGuards(JwtAuthGuard)
+  async bookmarkQuestion(
+    @Param('id') questionId: string,
+    @Request() req,
+  ) {
+    return this.konsultasiService.bookmarkQuestion(questionId, req.user.id);
+  }
+
+  // Remove bookmark
+  @Delete(':id/bookmark')
+  @UseGuards(JwtAuthGuard)
+  async removeBookmark(
+    @Param('id') questionId: string,
+    @Request() req,
+  ) {
+    return this.konsultasiService.removeBookmark(questionId, req.user.id);
+  }
+
+  // Get user bookmarks
+  @Get('user/bookmarks')
+  @UseGuards(JwtAuthGuard)
+  async getUserBookmarks(@Request() req) {
+    return this.konsultasiService.getUserBookmarks(req.user.id);
+  }
+
+  // Check if question is bookmarked by user
+  @Get(':id/is-bookmarked')
+  @UseGuards(JwtAuthGuard)
+  async isBookmarked(
+    @Param('id') questionId: string,
+    @Request() req,
+  ) {
+    return this.konsultasiService.isBookmarked(questionId, req.user.id);
   }
 }

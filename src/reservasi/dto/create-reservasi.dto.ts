@@ -17,8 +17,8 @@ export class CreateReservasiDto {
   type: 'chat' | 'tatap-muka';
 
   @IsOptional()
-  @IsString()
-  topic?: string;
+  @IsNumber()
+  topicId?: number;
 
   @IsOptional()
   @IsString()

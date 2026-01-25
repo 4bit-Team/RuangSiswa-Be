@@ -5,7 +5,7 @@ import { Conversation } from '../../chat/entities/conversation.entity';
 import { Message } from '../../chat/entities/message.entity';
 import { Call } from '../../chat/entities/call.entity';
 import { News } from '../../news/entities/news.entity';
-export type UserRole = 'kesiswaan' | 'siswa' | 'admin' | 'bk';
+export type UserRole = 'kesiswaan' | 'siswa' | 'admin' | 'bk' | 'kakom' | 'orang_tua';
 export type UserStatus = 'aktif' | 'nonaktif';
 export declare class User {
     id: number;

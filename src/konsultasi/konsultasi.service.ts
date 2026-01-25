@@ -1,11 +1,13 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, In } from 'typeorm';
 import { CreateKonsultasiDto } from './dto/create-konsultasi.dto';
 import { UpdateKonsultasiDto } from './dto/update-konsultasi.dto';
 import { CreateAnswerDto } from './dto/create-answer.dto';
 import { Konsultasi } from './entities/konsultasi.entity';
 import { KonsultasiAnswer } from './entities/konsultasi-answer.entity';
+import { KonsultasiBookmark } from './entities/konsultasi-bookmark.entity';
+import { ConsultationCategory } from '../consultation-category/entities/consultation-category.entity';
 import { ToxicFilterService } from '../toxic-filter/toxic-filter.service';
 
 @Injectable()
@@ -15,6 +17,10 @@ export class KonsultasiService {
     private konsultasiRepository: Repository<Konsultasi>,
     @InjectRepository(KonsultasiAnswer)
     private answerRepository: Repository<KonsultasiAnswer>,
+    @InjectRepository(KonsultasiBookmark)
+    private bookmarkRepository: Repository<KonsultasiBookmark>,
+    @InjectRepository(ConsultationCategory)
+    private categoryRepository: Repository<ConsultationCategory>,
     private toxicFilterService: ToxicFilterService,
   ) {}
 
@@ -29,11 +35,17 @@ export class KonsultasiService {
     const { category, sort, page, limit, search } = options;
     const skip = (page - 1) * limit;
 
-    let query = this.konsultasiRepository.createQueryBuilder('k').leftJoinAndSelect('k.author', 'author');
+    let query = this.konsultasiRepository
+      .createQueryBuilder('k')
+      .leftJoinAndSelect('k.author', 'author')
+      .leftJoinAndSelect('k.category', 'category');
 
-    // Filter by category
+    // Filter by category ID (not string name)
     if (category && category !== 'all') {
-      query = query.where('k.category = :category', { category });
+      const categoryId = parseInt(category, 10);
+      if (!isNaN(categoryId)) {
+        query = query.where('k.categoryId = :categoryId', { categoryId });
+      }
     }
 
     // Search by title or content
@@ -75,7 +87,47 @@ export class KonsultasiService {
   async findOneWithAnswers(id: string) {
     const question = await this.konsultasiRepository.findOne({
       where: { id },
-      relations: ['author', 'answers', 'answers.author'],
+      relations: ['author', 'category', 'answers', 'answers.author'],
+    });
+
+    if (!question) {
+      throw new NotFoundException('Pertanyaan tidak ditemukan');
+    }
+
+    // Increment views
+    question.views += 1;
+    await this.konsultasiRepository.save(question);
+
+    // Sort answers by votes
+    question.answers = question.answers.sort(
+      (a, b) => b.votes - a.votes || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    return {
+      question,
+      answers: question.answers,
+    };
+  }
+
+  // Find one question by slug
+  async findOneBySlug(slug: string) {
+    // Convert slug to words for flexible matching
+    const slugWords = slug.split('-').filter(w => w.length > 0);
+    
+    // Get all questions and find the best match
+    const questions = await this.konsultasiRepository
+      .createQueryBuilder('k')
+      .leftJoinAndSelect('k.author', 'author')
+      .leftJoinAndSelect('k.category', 'category')
+      .leftJoinAndSelect('k.answers', 'answers')
+      .leftJoinAndSelect('answers.author', 'answer_author')
+      .orderBy('k.createdAt', 'DESC')
+      .getMany();
+
+    // Find question where title contains all slug words
+    const question = questions.find(q => {
+      const titleLower = q.title.toLowerCase();
+      return slugWords.every(word => titleLower.includes(word));
     });
 
     if (!question) {
@@ -108,9 +160,24 @@ export class KonsultasiService {
       throw new BadRequestException('Konten mengandung kata-kata yang tidak sesuai');
     }
 
+    // Load category if provided
+    let category: ConsultationCategory | null = null;
+    if (createKonsultasiDto.categoryId) {
+      category = await this.categoryRepository.findOne({
+        where: { id: Number(createKonsultasiDto.categoryId) },
+      });
+
+      if (!category) {
+        throw new BadRequestException('Kategori tidak ditemukan');
+      }
+    }
+
     const question = this.konsultasiRepository.create({
-      ...createKonsultasiDto,
+      title: createKonsultasiDto.title,
+      content: createKonsultasiDto.content,
       authorId: userId,
+      categoryId: createKonsultasiDto.categoryId,
+      ...(category && { category }),
       views: 0,
       votes: 0,
       answerCount: 0,
@@ -148,7 +215,24 @@ export class KonsultasiService {
       }
     }
 
-    Object.assign(question, updateKonsultasiDto);
+    // Update category if provided
+    if (updateKonsultasiDto.categoryId) {
+      const category: ConsultationCategory | null = await this.categoryRepository.findOne({
+        where: { id: Number(updateKonsultasiDto.categoryId) },
+      });
+
+      if (!category) {
+        throw new BadRequestException('Kategori tidak ditemukan');
+      }
+
+      question.categoryId = updateKonsultasiDto.categoryId;
+      question.category = category;
+    }
+
+    // Update other fields
+    if (updateKonsultasiDto.title) question.title = updateKonsultasiDto.title;
+    if (updateKonsultasiDto.content) question.content = updateKonsultasiDto.content;
+
     return await this.konsultasiRepository.save(question);
   }
 
@@ -348,6 +432,75 @@ export class KonsultasiService {
       totalAnswers,
       totalViews,
       answerRate: ((answeredQuestions / (totalQuestions || 1)) * 100).toFixed(2) + '%',
+    };
+  }
+
+  // Bookmark a question
+  async bookmarkQuestion(questionId: string, userId: string) {
+    const question = await this.konsultasiRepository.findOne({
+      where: { id: questionId },
+    });
+
+    if (!question) {
+      throw new NotFoundException('Pertanyaan tidak ditemukan');
+    }
+
+    // Check if already bookmarked
+    const existingBookmark = await this.bookmarkRepository.findOne({
+      where: { konsultasiId: questionId, userId },
+    });
+
+    if (existingBookmark) {
+      throw new BadRequestException('Pertanyaan sudah di-bookmark');
+    }
+
+    const bookmark = this.bookmarkRepository.create({
+      konsultasiId: questionId,
+      userId,
+    });
+
+    return await this.bookmarkRepository.save(bookmark);
+  }
+
+  // Remove bookmark
+  async removeBookmark(questionId: string, userId: string) {
+    const result = await this.bookmarkRepository.delete({
+      konsultasiId: questionId,
+      userId,
+    });
+
+    if (result.affected === 0) {
+      throw new NotFoundException('Bookmark tidak ditemukan');
+    }
+
+    return { message: 'Bookmark berhasil dihapus' };
+  }
+
+  // Get user bookmarks
+  async getUserBookmarks(userId: string) {
+    const bookmarks = await this.bookmarkRepository.find({
+      where: { userId },
+      relations: ['konsultasi', 'konsultasi.author', 'konsultasi.category'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: bookmarks.map(b => ({
+        ...b.konsultasi,
+        bookmarkedAt: b.createdAt,
+      })),
+      total: bookmarks.length,
+    };
+  }
+
+  // Check if question is bookmarked
+  async isBookmarked(questionId: string, userId: string) {
+    const bookmark = await this.bookmarkRepository.findOne({
+      where: { konsultasiId: questionId, userId },
+    });
+
+    return {
+      isBookmarked: !!bookmark,
     };
   }
 }

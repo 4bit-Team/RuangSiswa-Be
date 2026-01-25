@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BkSchedule } from './entities/bk-schedule.entity';
+import { BkSchedule, DaySchedule } from './entities/bk-schedule.entity';
 import { CreateBkScheduleDto, UpdateBkScheduleDto } from './dto/create-bk-schedule.dto';
 import { Reservasi } from '../reservasi/entities/reservasi.entity';
 import { User } from '../users/entities/user.entity';
@@ -26,9 +26,7 @@ export class BkScheduleService {
 
     if (schedule) {
       // Update existing
-      schedule.startTime = createDto.startTime;
-      schedule.endTime = createDto.endTime;
-      schedule.availableDays = createDto.availableDays;
+      schedule.daySchedules = createDto.daySchedules;
       if (createDto.isActive !== undefined) {
         schedule.isActive = createDto.isActive;
       }
@@ -73,14 +71,8 @@ export class BkScheduleService {
   async update(bkId: number, sessionType: 'tatap-muka' | 'chat', updateDto: UpdateBkScheduleDto) {
     const schedule = await this.getScheduleByBkIdAndType(bkId, sessionType);
 
-    if (updateDto.startTime) {
-      schedule.startTime = updateDto.startTime;
-    }
-    if (updateDto.endTime) {
-      schedule.endTime = updateDto.endTime;
-    }
-    if (updateDto.availableDays) {
-      schedule.availableDays = updateDto.availableDays;
+    if (updateDto.daySchedules) {
+      schedule.daySchedules = updateDto.daySchedules;
     }
     if (updateDto.isActive !== undefined) {
       schedule.isActive = updateDto.isActive;
@@ -104,7 +96,7 @@ export class BkScheduleService {
       return false;
     }
 
-    // Check if day is available
+    // Get day name
     const dayNames = [
       'Sunday',
       'Monday',
@@ -116,14 +108,17 @@ export class BkScheduleService {
     ];
     const dayOfWeek = dayNames[date.getDay()];
 
-    if (!schedule.availableDays.includes(dayOfWeek)) {
+    // Find schedule for this specific day
+    const daySchedule = schedule.daySchedules.find(ds => ds.day === dayOfWeek && ds.isActive);
+
+    if (!daySchedule) {
       return false;
     }
 
     // Check if time is within working hours
     const [requestedHour, requestedMinute] = time.split(':').map(Number);
-    const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
-    const [endHour, endMinute] = schedule.endTime.split(':').map(Number);
+    const [startHour, startMinute] = daySchedule.startTime.split(':').map(Number);
+    const [endHour, endMinute] = daySchedule.endTime.split(':').map(Number);
 
     const requestedTimeInMinutes = requestedHour * 60 + requestedMinute;
     const startTimeInMinutes = startHour * 60 + startMinute;

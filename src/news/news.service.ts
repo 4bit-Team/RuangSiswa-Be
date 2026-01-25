@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, In, MoreThanOrEqual } from 'typeorm';
-import { News, NewsStatus, NewsCategory } from './entities/news.entity';
+import { News, NewsStatus } from './entities/news.entity';
 import { NewsLike } from './entities/news-like.entity';
 import { NewsComment } from './entities/news-comment.entity';
-import { CreateNewsDto, UpdateNewsDto, NewsQueryDto } from './dto/create-news.dto';
+import { NewsCategory } from '../news-category/entities/news-category.entity';
+import { CreateNewsDto, NewsQueryDto } from './dto/create-news.dto';
+import { UpdateNewsDto } from './dto/update-news.dto';
 import { User } from '../users/entities/user.entity';
 import * as schedule from 'node-schedule';
 
@@ -19,29 +21,12 @@ export class NewsService {
     private newsLikeRepository: Repository<NewsLike>,
     @InjectRepository(NewsComment)
     private newsCommentRepository: Repository<NewsComment>,
+    @InjectRepository(NewsCategory)
+    private newsCategoryRepository: Repository<NewsCategory>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {
     this.initializeScheduledNews();
-  }
-
-  // Parse categories string to array
-  private parseNewsData(news: any): any {
-    if (!news) return news;
-    
-    return {
-      ...news,
-      categories: typeof news.categories === 'string' 
-        ? news.categories.split(',').map(cat => cat.trim())
-        : Array.isArray(news.categories) 
-        ? news.categories 
-        : [],
-    };
-  }
-
-  // Parse array of news
-  private parseNewsArray(newsArray: any[]): any[] {
-    return newsArray.map(news => this.parseNewsData(news));
   }
 
   // Initialize scheduled news on service startup
@@ -97,14 +82,29 @@ export class NewsService {
       }
     }
 
+    // Load categories
+    let categories: NewsCategory[] = [];
+    if (createNewsDto.categoryIds && createNewsDto.categoryIds.length > 0) {
+      categories = await this.newsCategoryRepository.find({
+        where: { id: In(createNewsDto.categoryIds) },
+      });
+
+      if (categories.length !== createNewsDto.categoryIds.length) {
+        throw new BadRequestException('One or more categories not found');
+      }
+    }
+
     const news = this.newsRepository.create({
-      ...createNewsDto,
+      title: createNewsDto.title,
+      summary: createNewsDto.summary,
+      content: createNewsDto.content,
       authorId: userId,
+      status: createNewsDto.status,
       publishedDate: createNewsDto.status === 'published' ? new Date() : undefined,
-      // Only set scheduledDate if valid and status is scheduled
       scheduledDate: createNewsDto.status === 'scheduled' && createNewsDto.scheduledDate 
         ? new Date(createNewsDto.scheduledDate) 
         : undefined,
+      categories,
     });
     news.author = user;
 
@@ -115,7 +115,7 @@ export class NewsService {
       this.scheduleNewsPublishing(savedNews.id, news.scheduledDate);
     }
 
-    return this.parseNewsData(savedNews);
+    return savedNews;
   }
 
   // Get all news with filters
@@ -128,10 +128,6 @@ export class NewsService {
 
     if (query.status) {
       whereCondition.status = query.status;
-    }
-
-    if (query.category) {
-      whereCondition.categories = Like(`%${query.category}%`);
     }
 
     if (query.search) {
@@ -154,10 +150,10 @@ export class NewsService {
       skip,
       take: limit,
       order: orderBy,
-      relations: ['author', 'likes', 'comments'],
+      relations: ['author', 'categories', 'likes', 'comments'],
     });
 
-    return { data: this.parseNewsArray(data), total };
+    return { data, total };
   }
 
   // Get published news only
@@ -170,7 +166,7 @@ export class NewsService {
   async findOne(id: number): Promise<News> {
     const news = await this.newsRepository.findOne({
       where: { id },
-      relations: ['author', 'likes', 'comments', 'comments.author'],
+      relations: ['author', 'categories', 'likes', 'comments', 'comments.author'],
     });
 
     if (!news) {
@@ -181,7 +177,7 @@ export class NewsService {
     news.viewCount += 1;
     await this.newsRepository.save(news);
 
-    return this.parseNewsData(news);
+    return news;
   }
 
   // Update news
@@ -203,6 +199,19 @@ export class NewsService {
       throw new ForbiddenException('You can only edit your own news');
     }
 
+    // Handle categories update
+    if (updateNewsDto.categoryIds && updateNewsDto.categoryIds.length > 0) {
+      const categories = await this.newsCategoryRepository.find({
+        where: { id: In(updateNewsDto.categoryIds) },
+      });
+
+      if (categories.length !== updateNewsDto.categoryIds.length) {
+        throw new BadRequestException('One or more categories not found');
+      }
+
+      news.categories = categories;
+    }
+
     // Handle status change to scheduled
     if (
       updateNewsDto.status === 'scheduled' &&
@@ -213,12 +222,18 @@ export class NewsService {
 
     // Update published date if status changed to published
     if (updateNewsDto.status === 'published' && news.status !== 'published') {
-      updateNewsDto['publishedDate'] = new Date();
+      news.publishedDate = new Date();
     }
 
-    Object.assign(news, updateNewsDto);
+    // Update only safe fields (not categoryIds)
+    if (updateNewsDto.title) news.title = updateNewsDto.title;
+    if (updateNewsDto.summary) news.summary = updateNewsDto.summary;
+    if (updateNewsDto.content) news.content = updateNewsDto.content;
+    if (updateNewsDto.status) news.status = updateNewsDto.status;
+    if (updateNewsDto.scheduledDate) news.scheduledDate = new Date(updateNewsDto.scheduledDate);
+
     const updatedNews = await this.newsRepository.save(news);
-    return this.parseNewsData(updatedNews);
+    return updatedNews;
   }
 
   // Delete news
@@ -358,19 +373,19 @@ export class NewsService {
     const query = this.newsRepository
       .createQueryBuilder('news')
       .where("news.status = 'published'")
-      .andWhere(':category = ANY(news.categories)', { category });
+      .leftJoinAndSelect('news.author', 'author')
+      .leftJoinAndSelect('news.categories', 'categories')
+      .leftJoinAndSelect('news.likes', 'likes')
+      .leftJoinAndSelect('news.comments', 'comments');
 
     const total = await query.getCount();
     const data = await query
       .skip(skip)
       .take(limit)
       .orderBy('news.publishedDate', 'DESC')
-      .leftJoinAndSelect('news.author', 'author')
-      .leftJoinAndSelect('news.likes', 'likes')
-      .leftJoinAndSelect('news.comments', 'comments')
       .getMany();
 
-    return { data: this.parseNewsArray(data), total };
+    return { data, total };
   }
 
   // Get user's news
@@ -386,9 +401,9 @@ export class NewsService {
       skip,
       take: limit,
       order: { createdAt: 'DESC' },
-      relations: ['author', 'likes', 'comments'],
+      relations: ['author', 'categories', 'likes', 'comments'],
     });
 
-    return { data: this.parseNewsArray(data), total };
+    return { data, total };
   }
 }

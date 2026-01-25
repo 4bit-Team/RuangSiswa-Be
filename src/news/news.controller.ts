@@ -12,7 +12,8 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { NewsService } from './news.service';
-import { CreateNewsDto, UpdateNewsDto, NewsQueryDto } from './dto/create-news.dto';
+import { CreateNewsDto, NewsQueryDto } from './dto/create-news.dto';
+import { UpdateNewsDto } from './dto/update-news.dto';
 
 @Controller('news')
 export class NewsController {

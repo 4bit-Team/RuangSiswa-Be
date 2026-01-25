@@ -4,21 +4,24 @@ import {
   Column,
   ManyToOne,
   OneToMany,
+  ManyToMany,
+  JoinTable,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { NewsLike } from './news-like.entity';
 import { NewsComment } from './news-comment.entity';
+import { NewsCategory } from '../../news-category/entities/news-category.entity';
 
 export type NewsStatus = 'draft' | 'published' | 'scheduled';
-export type NewsCategory =
-  | 'Akademik'
-  | 'Kesehatan Mental'
-  | 'Karir'
-  | 'Pengembangan Diri'
-  | 'Sosial'
-  | 'Pengumuman';
+// export type NewsCategory =
+//   | 'Akademik'
+//   | 'Kesehatan Mental'
+//   | 'Karir'
+//   | 'Pengembangan Diri'
+//   | 'Sosial'
+//   | 'Pengumuman';
 
 @Entity('news')
 export class News {
@@ -37,7 +40,13 @@ export class News {
   @Column({ nullable: true })
   imageUrl: string;
 
-  @Column({ type: 'simple-array' })
+  // @Column({ type: 'simple-array' })
+  @ManyToMany(() => NewsCategory, { eager: true })
+  @JoinTable({
+    name: 'news_categories',
+    joinColumn: { name: 'newsId' },
+    inverseJoinColumn: { name: 'categoryId' },
+  })
   categories: NewsCategory[];
 
   @Column({ type: 'enum', enum: ['draft', 'published', 'scheduled'], default: 'draft' })

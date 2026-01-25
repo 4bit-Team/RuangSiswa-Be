@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { CounselingCategory } from '../../counseling-category/entities/counseling-category.entity';
 
 @Entity('reservasi')
 export class Reservasi {
@@ -29,8 +30,12 @@ export class Reservasi {
   @Column({ default: 'chat' })
   type: 'chat' | 'tatap-muka'; // Tipe sesi
 
+  @ManyToOne(() => CounselingCategory, { eager: true })
+  @JoinColumn({ name: 'topicId' })
+  topic: CounselingCategory;
+
   @Column({ nullable: true })
-  topic: string; // akademik, karir, sosial, keluarga, dll
+  topicId: number;
 
   @Column({ nullable: true })
   notes: string; // Catatan dari siswa
