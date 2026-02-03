@@ -87,6 +87,7 @@ export class ReservasiService {
       .createQueryBuilder('reservasi')
       .leftJoinAndSelect('reservasi.student', 'student')
       .leftJoinAndSelect('reservasi.counselor', 'counselor')
+      .leftJoinAndSelect('reservasi.topic', 'topic')
       .where('reservasi.id = :id', { id })
       .getOne();
   }
@@ -97,6 +98,7 @@ export class ReservasiService {
       .createQueryBuilder('reservasi')
       .leftJoinAndSelect('reservasi.student', 'student')
       .leftJoinAndSelect('reservasi.counselor', 'counselor')
+      .leftJoinAndSelect('reservasi.topic', 'topic') //update
       .where('reservasi.studentId = :studentId', { studentId })
       .orderBy('reservasi.preferredDate', 'DESC')
       .getMany();
@@ -108,6 +110,7 @@ export class ReservasiService {
       .createQueryBuilder('reservasi')
       .leftJoinAndSelect('reservasi.student', 'student')
       .leftJoinAndSelect('reservasi.counselor', 'counselor')
+      .leftJoinAndSelect('reservasi.topic', 'topic') //update
       .where('reservasi.counselorId = :counselorId', { counselorId })
       .orderBy('reservasi.preferredDate', 'DESC')
       .getMany();
@@ -124,10 +127,11 @@ export class ReservasiService {
     if (updateStatusDto.status === 'approved' && reservasi.status === 'pending') {
       try {
         // Create conversation
+        const topicName = typeof reservasi.topic === 'object' ? reservasi.topic?.name : reservasi.topic;
         const conversation = await this.chatService.getOrCreateConversation(
           reservasi.counselorId,
           reservasi.studentId,
-          `Sesi ${reservasi.type}: ${reservasi.topic || 'Konseling'}`,
+          `Sesi ${reservasi.type}: ${topicName || 'Konseling'}`,
         );
 
         // Save conversation ID ke reservasi
@@ -182,6 +186,7 @@ export class ReservasiService {
       .createQueryBuilder('reservasi')
       .leftJoinAndSelect('reservasi.student', 'student')
       .leftJoinAndSelect('reservasi.counselor', 'counselor')
+      .leftJoinAndSelect('reservasi.topic', 'topic') //update
       .where('reservasi.counselorId = :counselorId', { counselorId })
       .andWhere('reservasi.status = :status', { status: 'pending' })
       .orderBy('reservasi.preferredDate', 'ASC')
@@ -194,6 +199,7 @@ export class ReservasiService {
       .createQueryBuilder('reservasi')
       .leftJoinAndSelect('reservasi.student', 'student')
       .leftJoinAndSelect('reservasi.counselor', 'counselor')
+      .leftJoinAndSelect('reservasi.topic', 'topic') //update
       .where('reservasi.counselorId = :counselorId', { counselorId })
       .andWhere('reservasi.status = :status', { status: 'approved' });
 

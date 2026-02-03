@@ -112,6 +112,7 @@ let ReservasiService = class ReservasiService {
             .createQueryBuilder('reservasi')
             .leftJoinAndSelect('reservasi.student', 'student')
             .leftJoinAndSelect('reservasi.counselor', 'counselor')
+            .leftJoinAndSelect('reservasi.topic', 'topic')
             .where('reservasi.id = :id', { id })
             .getOne();
     }
@@ -120,6 +121,7 @@ let ReservasiService = class ReservasiService {
             .createQueryBuilder('reservasi')
             .leftJoinAndSelect('reservasi.student', 'student')
             .leftJoinAndSelect('reservasi.counselor', 'counselor')
+            .leftJoinAndSelect('reservasi.topic', 'topic')
             .where('reservasi.studentId = :studentId', { studentId })
             .orderBy('reservasi.preferredDate', 'DESC')
             .getMany();
@@ -129,6 +131,7 @@ let ReservasiService = class ReservasiService {
             .createQueryBuilder('reservasi')
             .leftJoinAndSelect('reservasi.student', 'student')
             .leftJoinAndSelect('reservasi.counselor', 'counselor')
+            .leftJoinAndSelect('reservasi.topic', 'topic')
             .where('reservasi.counselorId = :counselorId', { counselorId })
             .orderBy('reservasi.preferredDate', 'DESC')
             .getMany();
@@ -140,7 +143,8 @@ let ReservasiService = class ReservasiService {
         }
         if (updateStatusDto.status === 'approved' && reservasi.status === 'pending') {
             try {
-                const conversation = await this.chatService.getOrCreateConversation(reservasi.counselorId, reservasi.studentId, `Sesi ${reservasi.type}: ${reservasi.topic || 'Konseling'}`);
+                const topicName = typeof reservasi.topic === 'object' ? reservasi.topic?.name : reservasi.topic;
+                const conversation = await this.chatService.getOrCreateConversation(reservasi.counselorId, reservasi.studentId, `Sesi ${reservasi.type}: ${topicName || 'Konseling'}`);
                 reservasi.conversationId = conversation.id;
                 if (conversation.status === 'completed') {
                     await this.chatService.updateConversationStatus(conversation.id, 'active');
@@ -180,6 +184,7 @@ let ReservasiService = class ReservasiService {
             .createQueryBuilder('reservasi')
             .leftJoinAndSelect('reservasi.student', 'student')
             .leftJoinAndSelect('reservasi.counselor', 'counselor')
+            .leftJoinAndSelect('reservasi.topic', 'topic')
             .where('reservasi.counselorId = :counselorId', { counselorId })
             .andWhere('reservasi.status = :status', { status: 'pending' })
             .orderBy('reservasi.preferredDate', 'ASC')
@@ -190,6 +195,7 @@ let ReservasiService = class ReservasiService {
             .createQueryBuilder('reservasi')
             .leftJoinAndSelect('reservasi.student', 'student')
             .leftJoinAndSelect('reservasi.counselor', 'counselor')
+            .leftJoinAndSelect('reservasi.topic', 'topic')
             .where('reservasi.counselorId = :counselorId', { counselorId })
             .andWhere('reservasi.status = :status', { status: 'approved' });
         if (from && to) {

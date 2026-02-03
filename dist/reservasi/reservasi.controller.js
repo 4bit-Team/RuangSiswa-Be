@@ -17,6 +17,8 @@ const common_1 = require("@nestjs/common");
 const reservasi_service_1 = require("./reservasi.service");
 const create_reservasi_dto_1 = require("./dto/create-reservasi.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const roles_guard_1 = require("../auth/guards/roles.guard");
+const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const feedback_service_1 = require("./feedback.service");
 const create_feedback_dto_1 = require("./dto/create-feedback.dto");
 let ReservasiController = class ReservasiController {
@@ -62,9 +64,6 @@ let ReservasiController = class ReservasiController {
         const reservasi = await this.reservasiService.findOne(parseInt(id));
         if (!reservasi) {
             throw new common_1.NotFoundException('Reservasi not found');
-        }
-        if (reservasi.counselorId !== req.user.id) {
-            throw new common_1.BadRequestException('Unauthorized: Only the counselor can update this reservasi');
         }
         console.log(`Updating reservasi ${id} status to ${updateStatusDto.status}`);
         return await this.reservasiService.updateStatus(parseInt(id), updateStatusDto);
@@ -308,6 +307,8 @@ __decorate([
 ], ReservasiController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Put)(':id/status'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('bk'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __param(2, (0, common_1.Request)()),

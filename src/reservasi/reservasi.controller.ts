@@ -16,6 +16,8 @@ import {
 import { ReservasiService } from './reservasi.service';
 import { CreateReservasiDto, UpdateReservasiStatusDto } from './dto/create-reservasi.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 
@@ -90,6 +92,8 @@ export class ReservasiController {
 
   // Update status reservasi (approve/reject) - BK only
   @Put(':id/status')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk')
   async updateStatus(
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateReservasiStatusDto,
@@ -99,11 +103,6 @@ export class ReservasiController {
     
     if (!reservasi) {
       throw new NotFoundException('Reservasi not found');
-    }
-    
-    // Verify user is the counselor
-    if (reservasi.counselorId !== req.user.id) {
-      throw new BadRequestException('Unauthorized: Only the counselor can update this reservasi');
     }
 
     console.log(`Updating reservasi ${id} status to ${updateStatusDto.status}`);
