@@ -1,6 +1,0 @@
-0000000000000000000000000000000000000000 05608b96c632e054dc530d4f9d7da1949f779d9e Fourbit-Main <fourbitproject@gmail.com> 1762154181 +0000	clone: from github.com:4bit-Team/RuangSiswa-Be.git
-05608b96c632e054dc530d4f9d7da1949f779d9e cd1e3ae2d2b72dae72656aeb12dc04d3443c5d70 Fourbit-Main <fourbitproject@gmail.com> 1762155130 +0000	commit: Add NestJS project structure
-cd1e3ae2d2b72dae72656aeb12dc04d3443c5d70 05608b96c632e054dc530d4f9d7da1949f779d9e Fourbit-Main <fourbitproject@gmail.com> 1762155330 +0000	checkout: moving from main to development
-05608b96c632e054dc530d4f9d7da1949f779d9e cd1e3ae2d2b72dae72656aeb12dc04d3443c5d70 Fourbit-Main <fourbitproject@gmail.com> 1762155400 +0000	checkout: moving from development to main
-cd1e3ae2d2b72dae72656aeb12dc04d3443c5d70 05608b96c632e054dc530d4f9d7da1949f779d9e Fourbit-Main <fourbitproject@gmail.com> 1762155444 +0000	checkout: moving from main to development
-05608b96c632e054dc530d4f9d7da1949f779d9e cd1e3ae2d2b72dae72656aeb12dc04d3443c5d70 Fourbit-Main <fourbitproject@gmail.com> 1762155460 +0000	merge main: Fast-forward
