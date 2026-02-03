@@ -346,23 +346,40 @@ export class KonsultasiService {
     if (existingVote) {
       if (existingVote.vote === vote) {
         // Remove vote
-        answer.votes -= vote;
+        if (vote === 1) {
+          answer.votes--;
+        } else {
+          answer.downvotes--;
+        }
         answer.voters = voters.filter(v => v.userId !== userId);
       } else {
         // Change vote
-        answer.votes -= existingVote.vote;
-        answer.votes += vote;
+        if (existingVote.vote === 1) {
+          answer.votes--;
+        } else {
+          answer.downvotes--;
+        }
+        
+        if (vote === 1) {
+          answer.votes++;
+        } else {
+          answer.downvotes++;
+        }
         existingVote.vote = vote;
       }
     } else {
       // Add vote
-      answer.votes += vote;
+      if (vote === 1) {
+        answer.votes++;
+      } else {
+        answer.downvotes++;
+      }
       voters.push({ userId, vote });
       answer.voters = voters;
     }
 
     await this.answerRepository.save(answer);
-    return { votes: answer.votes };
+    return { votes: answer.votes, downvotes: answer.downvotes };
   }
 
   // Verify answer (BK only)

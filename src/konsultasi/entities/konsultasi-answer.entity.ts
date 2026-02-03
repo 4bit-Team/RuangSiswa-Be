@@ -30,6 +30,9 @@ export class KonsultasiAnswer {
   @Column({ default: 0 })
   votes: number;
 
+  @Column({ default: 0 })
+  downvotes: number;
+
   @Column('json', { default: '[]' })
   voters: Array<{ userId: string; vote: 1 | -1 }>;
 
