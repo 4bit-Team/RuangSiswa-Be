@@ -65,8 +65,10 @@ export declare class KonsultasiController {
                 vote: 1 | -1;
             }>;
             answerCount: number;
+            bookmarkCount: number;
             isResolved: boolean;
             answers: import("./entities/konsultasi-answer.entity").KonsultasiAnswer[];
+            bookmarks: import("./entities/konsultasi-bookmark.entity").KonsultasiBookmark[];
             createdAt: Date;
             updatedAt: Date;
         };
@@ -113,8 +115,10 @@ export declare class KonsultasiController {
                 vote: 1 | -1;
             }>;
             answerCount: number;
+            bookmarkCount: number;
             isResolved: boolean;
             answers: import("./entities/konsultasi-answer.entity").KonsultasiAnswer[];
+            bookmarks: import("./entities/konsultasi-bookmark.entity").KonsultasiBookmark[];
             createdAt: Date;
             updatedAt: Date;
         }[];

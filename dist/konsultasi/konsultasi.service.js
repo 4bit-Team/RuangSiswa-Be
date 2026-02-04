@@ -357,7 +357,10 @@ let KonsultasiService = class KonsultasiService {
             konsultasiId: questionId,
             userId,
         });
-        return await this.bookmarkRepository.save(bookmark);
+        await this.bookmarkRepository.save(bookmark);
+        question.bookmarkCount = (question.bookmarkCount || 0) + 1;
+        await this.konsultasiRepository.save(question);
+        return bookmark;
     }
     async removeBookmark(questionId, userId) {
         const result = await this.bookmarkRepository.delete({
@@ -366,6 +369,13 @@ let KonsultasiService = class KonsultasiService {
         });
         if (result.affected === 0) {
             throw new common_1.NotFoundException('Bookmark tidak ditemukan');
+        }
+        const question = await this.konsultasiRepository.findOne({
+            where: { id: questionId },
+        });
+        if (question) {
+            question.bookmarkCount = Math.max(0, (question.bookmarkCount || 0) - 1);
+            await this.konsultasiRepository.save(question);
         }
         return { message: 'Bookmark berhasil dihapus' };
     }

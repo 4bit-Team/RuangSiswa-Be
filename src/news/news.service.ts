@@ -92,12 +92,15 @@ export class NewsService {
       if (categories.length !== createNewsDto.categoryIds.length) {
         throw new BadRequestException('One or more categories not found');
       }
+    } else {
+      throw new BadRequestException('At least one category is required');
     }
 
     const news = this.newsRepository.create({
       title: createNewsDto.title,
       summary: createNewsDto.summary,
       content: createNewsDto.content,
+      imageUrl: createNewsDto.imageUrl,
       authorId: userId,
       status: createNewsDto.status,
       publishedDate: createNewsDto.status === 'published' ? new Date() : undefined,
@@ -188,7 +191,7 @@ export class NewsService {
   ): Promise<News> {
     const news = await this.newsRepository.findOne({
       where: { id },
-      relations: ['author'],
+      relations: ['author', 'categories'],
     });
 
     if (!news) {
@@ -210,6 +213,9 @@ export class NewsService {
       }
 
       news.categories = categories;
+    } else if (updateNewsDto.categoryIds?.length === 0) {
+      // Allow clearing categories
+      news.categories = [];
     }
 
     // Handle status change to scheduled
@@ -217,7 +223,11 @@ export class NewsService {
       updateNewsDto.status === 'scheduled' &&
       updateNewsDto.scheduledDate
     ) {
-      this.scheduleNewsPublishing(id, new Date(updateNewsDto.scheduledDate));
+      const scheduledDate = new Date(updateNewsDto.scheduledDate);
+      if (isNaN(scheduledDate.getTime())) {
+        throw new BadRequestException('Invalid scheduled date format');
+      }
+      this.scheduleNewsPublishing(id, scheduledDate);
     }
 
     // Update published date if status changed to published
@@ -225,10 +235,11 @@ export class NewsService {
       news.publishedDate = new Date();
     }
 
-    // Update only safe fields (not categoryIds)
+    // Update fields
     if (updateNewsDto.title) news.title = updateNewsDto.title;
     if (updateNewsDto.summary) news.summary = updateNewsDto.summary;
     if (updateNewsDto.content) news.content = updateNewsDto.content;
+    if (updateNewsDto.imageUrl) news.imageUrl = updateNewsDto.imageUrl;
     if (updateNewsDto.status) news.status = updateNewsDto.status;
     if (updateNewsDto.scheduledDate) news.scheduledDate = new Date(updateNewsDto.scheduledDate);
 

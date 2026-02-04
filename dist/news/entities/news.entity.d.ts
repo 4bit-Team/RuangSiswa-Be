@@ -8,7 +8,7 @@ export declare class News {
     title: string;
     summary: string;
     content: string;
-    imageUrl: string;
+    imageUrl?: string;
     categories: NewsCategory[];
     status: NewsStatus;
     viewCount: number;

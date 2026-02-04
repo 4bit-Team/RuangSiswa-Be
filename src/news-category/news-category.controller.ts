@@ -6,32 +6,43 @@ import { NewsCategoryService } from './news-category.service';
 import { CreateNewsCategoryDto, UpdateNewsCategoryDto } from './dto/create-news-category.dto';
 
 @Controller('news-category')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class NewsCategoryController {
   constructor(private readonly categoryService: NewsCategoryService) {}
 
+  // Public endpoint - no authentication required
+  @Get('public/list')
+  async getPublicCategories() {
+    return await this.categoryService.findAll(true);
+  }
+
+  // Protected endpoints - require authentication
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('bk', 'kesiswaan', 'admin')
   async create(@Body() createDto: CreateNewsCategoryDto) {
     return await this.categoryService.create(createDto);
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   async findAll() {
     return await this.categoryService.findAll(true);
   }
 
   @Get('all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   async findAllIncludeInactive() {
     return await this.categoryService.findAll();
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   async findById(@Param('id') id: number) {
     return await this.categoryService.findById(id);
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('bk', 'kesiswaan', 'admin')
   async update(
     @Param('id') id: number,
@@ -41,6 +52,7 @@ export class NewsCategoryController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @HttpCode(200)
   async delete(@Param('id') id: number) {

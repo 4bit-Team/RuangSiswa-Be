@@ -476,7 +476,13 @@ export class KonsultasiService {
       userId,
     });
 
-    return await this.bookmarkRepository.save(bookmark);
+    await this.bookmarkRepository.save(bookmark);
+
+    // Increment bookmark count
+    question.bookmarkCount = (question.bookmarkCount || 0) + 1;
+    await this.konsultasiRepository.save(question);
+
+    return bookmark;
   }
 
   // Remove bookmark
@@ -488,6 +494,16 @@ export class KonsultasiService {
 
     if (result.affected === 0) {
       throw new NotFoundException('Bookmark tidak ditemukan');
+    }
+
+    // Decrement bookmark count
+    const question = await this.konsultasiRepository.findOne({
+      where: { id: questionId },
+    });
+
+    if (question) {
+      question.bookmarkCount = Math.max(0, (question.bookmarkCount || 0) - 1);
+      await this.konsultasiRepository.save(question);
     }
 
     return { message: 'Bookmark berhasil dihapus' };

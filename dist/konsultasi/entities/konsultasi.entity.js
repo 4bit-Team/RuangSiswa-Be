@@ -13,6 +13,7 @@ exports.Konsultasi = void 0;
 const typeorm_1 = require("typeorm");
 const user_entity_1 = require("../../users/entities/user.entity");
 const konsultasi_answer_entity_1 = require("./konsultasi-answer.entity");
+const konsultasi_bookmark_entity_1 = require("./konsultasi-bookmark.entity");
 const consultation_category_entity_1 = require("../../consultation-category/entities/consultation-category.entity");
 let Konsultasi = class Konsultasi {
     id;
@@ -27,8 +28,10 @@ let Konsultasi = class Konsultasi {
     votes;
     voters;
     answerCount;
+    bookmarkCount;
     isResolved;
     answers;
+    bookmarks;
     createdAt;
     updatedAt;
 };
@@ -84,6 +87,10 @@ __decorate([
     __metadata("design:type", Number)
 ], Konsultasi.prototype, "answerCount", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ default: 0 }),
+    __metadata("design:type", Number)
+], Konsultasi.prototype, "bookmarkCount", void 0);
+__decorate([
     (0, typeorm_1.Column)({ default: false }),
     __metadata("design:type", Boolean)
 ], Konsultasi.prototype, "isResolved", void 0);
@@ -91,6 +98,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => konsultasi_answer_entity_1.KonsultasiAnswer, answer => answer.konsultasi, { cascade: true }),
     __metadata("design:type", Array)
 ], Konsultasi.prototype, "answers", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => konsultasi_bookmark_entity_1.KonsultasiBookmark, bookmark => bookmark.konsultasi, { cascade: true }),
+    __metadata("design:type", Array)
+], Konsultasi.prototype, "bookmarks", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

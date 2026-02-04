@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, Index, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { KonsultasiAnswer } from './konsultasi-answer.entity';
+import { KonsultasiBookmark } from './konsultasi-bookmark.entity';
 import { ConsultationCategory } from '../../consultation-category/entities/consultation-category.entity';
 
 @Entity('konsultasi')
@@ -52,11 +53,17 @@ export class Konsultasi {
   @Column({ default: 0 })
   answerCount: number;
 
+  @Column({ default: 0 })
+  bookmarkCount: number;
+
   @Column({ default: false })
   isResolved: boolean;
 
   @OneToMany(() => KonsultasiAnswer, answer => answer.konsultasi, { cascade: true })
   answers: KonsultasiAnswer[];
+
+  @OneToMany(() => KonsultasiBookmark, bookmark => bookmark.konsultasi, { cascade: true })
+  bookmarks: KonsultasiBookmark[];
 
   @CreateDateColumn()
   createdAt: Date;

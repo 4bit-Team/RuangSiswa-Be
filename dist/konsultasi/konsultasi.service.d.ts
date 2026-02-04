@@ -68,8 +68,10 @@ export declare class KonsultasiService {
                 vote: 1 | -1;
             }>;
             answerCount: number;
+            bookmarkCount: number;
             isResolved: boolean;
             answers: KonsultasiAnswer[];
+            bookmarks: KonsultasiBookmark[];
             createdAt: Date;
             updatedAt: Date;
         };
@@ -124,8 +126,10 @@ export declare class KonsultasiService {
                 vote: 1 | -1;
             }>;
             answerCount: number;
+            bookmarkCount: number;
             isResolved: boolean;
             answers: KonsultasiAnswer[];
+            bookmarks: KonsultasiBookmark[];
             createdAt: Date;
             updatedAt: Date;
         }[];

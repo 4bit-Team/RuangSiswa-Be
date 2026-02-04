@@ -24,6 +24,9 @@ let NewsCategoryController = class NewsCategoryController {
     constructor(categoryService) {
         this.categoryService = categoryService;
     }
+    async getPublicCategories() {
+        return await this.categoryService.findAll(true);
+    }
     async create(createDto) {
         return await this.categoryService.create(createDto);
     }
@@ -45,7 +48,14 @@ let NewsCategoryController = class NewsCategoryController {
 };
 exports.NewsCategoryController = NewsCategoryController;
 __decorate([
+    (0, common_1.Get)('public/list'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], NewsCategoryController.prototype, "getPublicCategories", null);
+__decorate([
     (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('bk', 'kesiswaan', 'admin'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -54,18 +64,21 @@ __decorate([
 ], NewsCategoryController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], NewsCategoryController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)('all'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], NewsCategoryController.prototype, "findAllIncludeInactive", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number]),
@@ -73,6 +86,7 @@ __decorate([
 ], NewsCategoryController.prototype, "findById", null);
 __decorate([
     (0, common_1.Put)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('bk', 'kesiswaan', 'admin'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -82,6 +96,7 @@ __decorate([
 ], NewsCategoryController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     (0, roles_decorator_1.Roles)('admin'),
     (0, common_1.HttpCode)(200),
     __param(0, (0, common_1.Param)('id')),
@@ -91,7 +106,6 @@ __decorate([
 ], NewsCategoryController.prototype, "delete", null);
 exports.NewsCategoryController = NewsCategoryController = __decorate([
     (0, common_1.Controller)('news-category'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
     __metadata("design:paramtypes", [news_category_service_1.NewsCategoryService])
 ], NewsCategoryController);
 //# sourceMappingURL=news-category.controller.js.map

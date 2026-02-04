@@ -3,6 +3,7 @@ import { CreateNewsCategoryDto, UpdateNewsCategoryDto } from './dto/create-news-
 export declare class NewsCategoryController {
     private readonly categoryService;
     constructor(categoryService: NewsCategoryService);
+    getPublicCategories(): Promise<import("./entities/news-category.entity").NewsCategory[]>;
     create(createDto: CreateNewsCategoryDto): Promise<import("./entities/news-category.entity").NewsCategory>;
     findAll(): Promise<import("./entities/news-category.entity").NewsCategory[]>;
     findAllIncludeInactive(): Promise<import("./entities/news-category.entity").NewsCategory[]>;

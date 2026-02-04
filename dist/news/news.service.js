@@ -119,10 +119,14 @@ let NewsService = class NewsService {
                 throw new common_1.BadRequestException('One or more categories not found');
             }
         }
+        else {
+            throw new common_1.BadRequestException('At least one category is required');
+        }
         const news = this.newsRepository.create({
             title: createNewsDto.title,
             summary: createNewsDto.summary,
             content: createNewsDto.content,
+            imageUrl: createNewsDto.imageUrl,
             authorId: userId,
             status: createNewsDto.status,
             publishedDate: createNewsDto.status === 'published' ? new Date() : undefined,
@@ -188,7 +192,7 @@ let NewsService = class NewsService {
     async update(id, updateNewsDto, userId) {
         const news = await this.newsRepository.findOne({
             where: { id },
-            relations: ['author'],
+            relations: ['author', 'categories'],
         });
         if (!news) {
             throw new common_1.NotFoundException('News not found');
@@ -205,9 +209,16 @@ let NewsService = class NewsService {
             }
             news.categories = categories;
         }
+        else if (updateNewsDto.categoryIds?.length === 0) {
+            news.categories = [];
+        }
         if (updateNewsDto.status === 'scheduled' &&
             updateNewsDto.scheduledDate) {
-            this.scheduleNewsPublishing(id, new Date(updateNewsDto.scheduledDate));
+            const scheduledDate = new Date(updateNewsDto.scheduledDate);
+            if (isNaN(scheduledDate.getTime())) {
+                throw new common_1.BadRequestException('Invalid scheduled date format');
+            }
+            this.scheduleNewsPublishing(id, scheduledDate);
         }
         if (updateNewsDto.status === 'published' && news.status !== 'published') {
             news.publishedDate = new Date();
@@ -218,6 +229,8 @@ let NewsService = class NewsService {
             news.summary = updateNewsDto.summary;
         if (updateNewsDto.content)
             news.content = updateNewsDto.content;
+        if (updateNewsDto.imageUrl)
+            news.imageUrl = updateNewsDto.imageUrl;
         if (updateNewsDto.status)
             news.status = updateNewsDto.status;
         if (updateNewsDto.scheduledDate)

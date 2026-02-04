@@ -38,7 +38,7 @@ export class News {
   content: string;
 
   @Column({ nullable: true })
-  imageUrl: string;
+  imageUrl?: string;
 
   // @Column({ type: 'simple-array' })
   @ManyToMany(() => NewsCategory, { eager: true })
