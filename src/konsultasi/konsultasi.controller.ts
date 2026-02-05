@@ -3,6 +3,7 @@ import { KonsultasiService } from './konsultasi.service';
 import { CreateKonsultasiDto } from './dto/create-konsultasi.dto';
 import { UpdateKonsultasiDto } from './dto/update-konsultasi.dto';
 import { CreateAnswerDto } from './dto/create-answer.dto';
+import { CreateReplyDto } from './dto/create-reply.dto';
 import { FilterKonsultasiDto } from './dto/filter-konsultasi.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -112,6 +113,31 @@ export class KonsultasiController {
     @Request() req,
   ) {
     return this.konsultasiService.voteAnswer(questionId, answerId, req.user.id, vote);
+  }
+
+  // Create reply to answer
+  @Post(':questionId/answers/:answerId/replies')
+  @UseGuards(JwtAuthGuard)
+  async createReply(
+    @Param('questionId') questionId: string,
+    @Param('answerId') answerId: string,
+    @Body() createReplyDto: CreateReplyDto,
+    @Request() req,
+  ) {
+    return this.konsultasiService.createReply(questionId, answerId, createReplyDto, req.user.id);
+  }
+
+  // Vote on reply
+  @Post(':questionId/answers/:answerId/replies/:replyId/vote')
+  @UseGuards(JwtAuthGuard)
+  async voteReply(
+    @Param('questionId') questionId: string,
+    @Param('answerId') answerId: string,
+    @Param('replyId') replyId: string,
+    @Body() { vote }: { vote: 1 | -1 },
+    @Request() req,
+  ) {
+    return this.konsultasiService.voteReply(questionId, answerId, replyId, req.user.id, vote);
   }
 
   // Mark answer as verified (only BK role)

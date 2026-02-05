@@ -417,4 +417,15 @@ export class NewsService {
 
     return { data, total };
   }
+
+  // Increment view count only
+  async incrementViews(id: number): Promise<News> {
+    const news = await this.newsRepository.findOne({ where: { id } });
+    if (!news) {
+      throw new NotFoundException('News not found');
+    }
+    news.viewCount += 1;
+    await this.newsRepository.save(news);
+    return news;
+  }
 }

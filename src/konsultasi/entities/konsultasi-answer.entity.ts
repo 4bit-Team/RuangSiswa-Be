@@ -53,4 +53,5 @@ export class KonsultasiAnswer {
 
   @UpdateDateColumn()
   updatedAt: Date;
+    replies: any;
 }

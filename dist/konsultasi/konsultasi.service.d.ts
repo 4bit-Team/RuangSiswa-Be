@@ -2,18 +2,23 @@ import { Repository } from 'typeorm';
 import { CreateKonsultasiDto } from './dto/create-konsultasi.dto';
 import { UpdateKonsultasiDto } from './dto/update-konsultasi.dto';
 import { CreateAnswerDto } from './dto/create-answer.dto';
+import { CreateReplyDto } from './dto/create-reply.dto';
 import { Konsultasi } from './entities/konsultasi.entity';
 import { KonsultasiAnswer } from './entities/konsultasi-answer.entity';
+import { KonsultasiAnswerReply } from './entities/konsultasi-answer-reply.entity';
 import { KonsultasiBookmark } from './entities/konsultasi-bookmark.entity';
 import { ConsultationCategory } from '../consultation-category/entities/consultation-category.entity';
 import { ToxicFilterService } from '../toxic-filter/toxic-filter.service';
+import { User } from '../users/entities/user.entity';
 export declare class KonsultasiService {
     private konsultasiRepository;
     private answerRepository;
+    private replyRepository;
     private bookmarkRepository;
     private categoryRepository;
+    private userRepository;
     private toxicFilterService;
-    constructor(konsultasiRepository: Repository<Konsultasi>, answerRepository: Repository<KonsultasiAnswer>, bookmarkRepository: Repository<KonsultasiBookmark>, categoryRepository: Repository<ConsultationCategory>, toxicFilterService: ToxicFilterService);
+    constructor(konsultasiRepository: Repository<Konsultasi>, answerRepository: Repository<KonsultasiAnswer>, replyRepository: Repository<KonsultasiAnswerReply>, bookmarkRepository: Repository<KonsultasiBookmark>, categoryRepository: Repository<ConsultationCategory>, userRepository: Repository<User>, toxicFilterService: ToxicFilterService);
     findAll(options: {
         category?: string;
         sort: 'trending' | 'newest' | 'unanswered';
@@ -59,7 +64,7 @@ export declare class KonsultasiService {
             category: ConsultationCategory;
             categoryId: number;
             authorId: string;
-            author: import("../users/entities/user.entity").User;
+            author: User;
             tags: string[];
             views: number;
             votes: number;
@@ -81,7 +86,7 @@ export declare class KonsultasiService {
             konsultasiId: string;
             konsultasi: Konsultasi;
             authorId: string;
-            author: import("../users/entities/user.entity").User;
+            author: User;
             votes: number;
             downvotes: number;
             voters: Array<{
@@ -94,6 +99,7 @@ export declare class KonsultasiService {
             attachment: string | null;
             createdAt: Date;
             updatedAt: Date;
+            replies: any;
         }[];
     }>;
     getStatistics(): Promise<{
@@ -117,7 +123,7 @@ export declare class KonsultasiService {
             category: ConsultationCategory;
             categoryId: number;
             authorId: string;
-            author: import("../users/entities/user.entity").User;
+            author: User;
             tags: string[];
             views: number;
             votes: number;
@@ -137,5 +143,19 @@ export declare class KonsultasiService {
     }>;
     isBookmarked(questionId: string, userId: string): Promise<{
         isBookmarked: boolean;
+    }>;
+    createReply(questionId: string, answerId: string, createReplyDto: CreateReplyDto, userId: string | number): Promise<{
+        id: string;
+        content: string;
+        authorId: number;
+        votes: number;
+        downvotes: number;
+        isVerified: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    voteReply(questionId: string, answerId: string, replyId: string, userId: string | number, vote: 1 | -1): Promise<{
+        votes: number;
+        downvotes: number;
     }>;
 }

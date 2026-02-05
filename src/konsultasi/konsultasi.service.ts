@@ -4,11 +4,14 @@ import { Repository, MoreThan, In } from 'typeorm';
 import { CreateKonsultasiDto } from './dto/create-konsultasi.dto';
 import { UpdateKonsultasiDto } from './dto/update-konsultasi.dto';
 import { CreateAnswerDto } from './dto/create-answer.dto';
+import { CreateReplyDto } from './dto/create-reply.dto';
 import { Konsultasi } from './entities/konsultasi.entity';
 import { KonsultasiAnswer } from './entities/konsultasi-answer.entity';
+import { KonsultasiAnswerReply } from './entities/konsultasi-answer-reply.entity';
 import { KonsultasiBookmark } from './entities/konsultasi-bookmark.entity';
 import { ConsultationCategory } from '../consultation-category/entities/consultation-category.entity';
 import { ToxicFilterService } from '../toxic-filter/toxic-filter.service';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class KonsultasiService {
@@ -17,10 +20,14 @@ export class KonsultasiService {
     private konsultasiRepository: Repository<Konsultasi>,
     @InjectRepository(KonsultasiAnswer)
     private answerRepository: Repository<KonsultasiAnswer>,
+    @InjectRepository(KonsultasiAnswerReply)
+    private replyRepository: Repository<KonsultasiAnswerReply>,
     @InjectRepository(KonsultasiBookmark)
     private bookmarkRepository: Repository<KonsultasiBookmark>,
     @InjectRepository(ConsultationCategory)
     private categoryRepository: Repository<ConsultationCategory>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private toxicFilterService: ToxicFilterService,
   ) {}
 
@@ -87,7 +94,7 @@ export class KonsultasiService {
   async findOneWithAnswers(id: string) {
     const question = await this.konsultasiRepository.findOne({
       where: { id },
-      relations: ['author', 'category', 'answers', 'answers.author'],
+      relations: ['author', 'category', 'answers', 'answers.author', 'answers.replies', 'answers.replies.author'],
     });
 
     if (!question) {
@@ -98,10 +105,17 @@ export class KonsultasiService {
     question.views += 1;
     await this.konsultasiRepository.save(question);
 
-    // Sort answers by votes
+    // Sort answers by votes and sort replies by creation date
     question.answers = question.answers.sort(
       (a, b) => b.votes - a.votes || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
+
+    // Sort replies by creation date for each answer
+    question.answers.forEach(answer => {
+      if (answer.replies) {
+        answer.replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      }
+    });
 
     return {
       question,
@@ -535,5 +549,111 @@ export class KonsultasiService {
     return {
       isBookmarked: !!bookmark,
     };
+  }
+
+  // Create reply to answer
+  async createReply(questionId: string, answerId: string, createReplyDto: CreateReplyDto, userId: string | number) {
+    // Verify question exists
+    const question = await this.konsultasiRepository.findOne({
+      where: { id: questionId },
+    });
+
+    if (!question) {
+      throw new NotFoundException('Pertanyaan tidak ditemukan');
+    }
+
+    // Verify answer exists
+    const answer = await this.answerRepository.findOne({
+      where: { id: answerId, konsultasiId: questionId },
+    });
+
+    if (!answer) {
+      throw new NotFoundException('Jawaban tidak ditemukan');
+    }
+
+    // Get user info
+    const user = await this.userRepository.findOne({
+      where: { id: Number(userId) },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User tidak ditemukan');
+    }
+
+    // Create reply
+    const reply = this.replyRepository.create({
+      answerId,
+      authorId: Number(userId),
+      content: createReplyDto.content,
+    });
+
+    const savedReply = await this.replyRepository.save(reply);
+
+    // Load user data for response
+    savedReply.author = user;
+
+    return {
+      id: savedReply.id,
+      content: savedReply.content,
+      authorId: savedReply.authorId,
+      votes: savedReply.votes,
+      downvotes: savedReply.downvotes,
+      isVerified: savedReply.isVerified,
+      createdAt: savedReply.createdAt,
+      updatedAt: savedReply.updatedAt,
+    };
+  }
+
+  // Vote on reply
+  async voteReply(questionId: string, answerId: string, replyId: string, userId: string | number, vote: 1 | -1) {
+    const reply = await this.replyRepository.findOne({
+      where: { id: replyId, answerId },
+    });
+
+    if (!reply) {
+      throw new NotFoundException('Balasan tidak ditemukan');
+    }
+
+    const numUserId = Number(userId);
+    const voters = reply.voters as Array<{ userId: number; vote: 1 | -1 }>;
+    const existingVote = voters.find(v => v.userId === numUserId);
+
+    if (existingVote) {
+      if (existingVote.vote === vote) {
+        // Remove vote
+        if (vote === 1) {
+          reply.votes--;
+        } else {
+          reply.downvotes--;
+        }
+        reply.voters = voters.filter(v => v.userId !== numUserId);
+      } else {
+        // Change vote
+        if (existingVote.vote === 1) {
+          reply.votes--;
+        } else {
+          reply.downvotes--;
+        }
+        
+        if (vote === 1) {
+          reply.votes++;
+        } else {
+          reply.downvotes++;
+        }
+        existingVote.vote = vote;
+      }
+    } else {
+      // Add vote
+      if (vote === 1) {
+        reply.votes++;
+      } else {
+        reply.downvotes++;
+      }
+      voters.push({ userId: numUserId, vote });
+      reply.voters = voters;
+    }
+
+    await this.replyRepository.save(reply);
+    return { votes: reply.votes, downvotes: reply.downvotes };
   }
 }

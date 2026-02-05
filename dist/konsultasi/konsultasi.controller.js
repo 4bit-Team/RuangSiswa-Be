@@ -18,6 +18,7 @@ const konsultasi_service_1 = require("./konsultasi.service");
 const create_konsultasi_dto_1 = require("./dto/create-konsultasi.dto");
 const update_konsultasi_dto_1 = require("./dto/update-konsultasi.dto");
 const create_answer_dto_1 = require("./dto/create-answer.dto");
+const create_reply_dto_1 = require("./dto/create-reply.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const roles_decorator_1 = require("../auth/decorators/roles.decorator");
 const roles_guard_1 = require("../auth/guards/roles.guard");
@@ -61,6 +62,12 @@ let KonsultasiController = class KonsultasiController {
     }
     async voteAnswer(questionId, answerId, { vote }, req) {
         return this.konsultasiService.voteAnswer(questionId, answerId, req.user.id, vote);
+    }
+    async createReply(questionId, answerId, createReplyDto, req) {
+        return this.konsultasiService.createReply(questionId, answerId, createReplyDto, req.user.id);
+    }
+    async voteReply(questionId, answerId, replyId, { vote }, req) {
+        return this.konsultasiService.voteReply(questionId, answerId, replyId, req.user.id, vote);
     }
     async verifyAnswer(questionId, answerId, req) {
         return this.konsultasiService.verifyAnswer(questionId, answerId, req.user.id);
@@ -176,6 +183,29 @@ __decorate([
     __metadata("design:paramtypes", [String, String, Object, Object]),
     __metadata("design:returntype", Promise)
 ], KonsultasiController.prototype, "voteAnswer", null);
+__decorate([
+    (0, common_1.Post)(':questionId/answers/:answerId/replies'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('questionId')),
+    __param(1, (0, common_1.Param)('answerId')),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, create_reply_dto_1.CreateReplyDto, Object]),
+    __metadata("design:returntype", Promise)
+], KonsultasiController.prototype, "createReply", null);
+__decorate([
+    (0, common_1.Post)(':questionId/answers/:answerId/replies/:replyId/vote'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    __param(0, (0, common_1.Param)('questionId')),
+    __param(1, (0, common_1.Param)('answerId')),
+    __param(2, (0, common_1.Param)('replyId')),
+    __param(3, (0, common_1.Body)()),
+    __param(4, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, Object, Object]),
+    __metadata("design:returntype", Promise)
+], KonsultasiController.prototype, "voteReply", null);
 __decorate([
     (0, common_1.Put)(':questionId/answers/:answerId/verify'),
     (0, roles_decorator_1.Roles)('bk', 'admin'),

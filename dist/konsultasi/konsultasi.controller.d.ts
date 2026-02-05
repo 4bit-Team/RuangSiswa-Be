@@ -2,6 +2,7 @@ import { KonsultasiService } from './konsultasi.service';
 import { CreateKonsultasiDto } from './dto/create-konsultasi.dto';
 import { UpdateKonsultasiDto } from './dto/update-konsultasi.dto';
 import { CreateAnswerDto } from './dto/create-answer.dto';
+import { CreateReplyDto } from './dto/create-reply.dto';
 export declare class KonsultasiController {
     private readonly konsultasiService;
     constructor(konsultasiService: KonsultasiService);
@@ -42,6 +43,22 @@ export declare class KonsultasiController {
     }>;
     addAnswer(questionId: string, createAnswerDto: CreateAnswerDto, req: any): Promise<import("./entities/konsultasi-answer.entity").KonsultasiAnswer>;
     voteAnswer(questionId: string, answerId: string, { vote }: {
+        vote: 1 | -1;
+    }, req: any): Promise<{
+        votes: number;
+        downvotes: number;
+    }>;
+    createReply(questionId: string, answerId: string, createReplyDto: CreateReplyDto, req: any): Promise<{
+        id: string;
+        content: string;
+        authorId: number;
+        votes: number;
+        downvotes: number;
+        isVerified: boolean;
+        createdAt: Date;
+        updatedAt: Date;
+    }>;
+    voteReply(questionId: string, answerId: string, replyId: string, { vote }: {
         vote: 1 | -1;
     }, req: any): Promise<{
         votes: number;
@@ -91,6 +108,7 @@ export declare class KonsultasiController {
             attachment: string | null;
             createdAt: Date;
             updatedAt: Date;
+            replies: any;
         }[];
     }>;
     bookmarkQuestion(questionId: string, req: any): Promise<import("./entities/konsultasi-bookmark.entity").KonsultasiBookmark>;

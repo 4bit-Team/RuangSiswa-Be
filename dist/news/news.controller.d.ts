@@ -46,4 +46,7 @@ export declare class NewsController {
     deleteComment(commentId: string, req: any): Promise<{
         message: string;
     }>;
+    incrementViews(id: string): Promise<{
+        message: string;
+    }>;
 }

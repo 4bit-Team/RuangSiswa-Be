@@ -356,6 +356,15 @@ let NewsService = class NewsService {
         });
         return { data, total };
     }
+    async incrementViews(id) {
+        const news = await this.newsRepository.findOne({ where: { id } });
+        if (!news) {
+            throw new common_1.NotFoundException('News not found');
+        }
+        news.viewCount += 1;
+        await this.newsRepository.save(news);
+        return news;
+    }
 };
 exports.NewsService = NewsService;
 exports.NewsService = NewsService = __decorate([

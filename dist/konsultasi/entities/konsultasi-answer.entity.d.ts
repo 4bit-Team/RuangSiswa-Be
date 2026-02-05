@@ -19,4 +19,5 @@ export declare class KonsultasiAnswer {
     attachment: string | null;
     createdAt: Date;
     updatedAt: Date;
+    replies: any;
 }

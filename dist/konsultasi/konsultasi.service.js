@@ -18,20 +18,26 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const konsultasi_entity_1 = require("./entities/konsultasi.entity");
 const konsultasi_answer_entity_1 = require("./entities/konsultasi-answer.entity");
+const konsultasi_answer_reply_entity_1 = require("./entities/konsultasi-answer-reply.entity");
 const konsultasi_bookmark_entity_1 = require("./entities/konsultasi-bookmark.entity");
 const consultation_category_entity_1 = require("../consultation-category/entities/consultation-category.entity");
 const toxic_filter_service_1 = require("../toxic-filter/toxic-filter.service");
+const user_entity_1 = require("../users/entities/user.entity");
 let KonsultasiService = class KonsultasiService {
     konsultasiRepository;
     answerRepository;
+    replyRepository;
     bookmarkRepository;
     categoryRepository;
+    userRepository;
     toxicFilterService;
-    constructor(konsultasiRepository, answerRepository, bookmarkRepository, categoryRepository, toxicFilterService) {
+    constructor(konsultasiRepository, answerRepository, replyRepository, bookmarkRepository, categoryRepository, userRepository, toxicFilterService) {
         this.konsultasiRepository = konsultasiRepository;
         this.answerRepository = answerRepository;
+        this.replyRepository = replyRepository;
         this.bookmarkRepository = bookmarkRepository;
         this.categoryRepository = categoryRepository;
+        this.userRepository = userRepository;
         this.toxicFilterService = toxicFilterService;
     }
     async findAll(options) {
@@ -76,7 +82,7 @@ let KonsultasiService = class KonsultasiService {
     async findOneWithAnswers(id) {
         const question = await this.konsultasiRepository.findOne({
             where: { id },
-            relations: ['author', 'category', 'answers', 'answers.author'],
+            relations: ['author', 'category', 'answers', 'answers.author', 'answers.replies', 'answers.replies.author'],
         });
         if (!question) {
             throw new common_1.NotFoundException('Pertanyaan tidak ditemukan');
@@ -84,6 +90,11 @@ let KonsultasiService = class KonsultasiService {
         question.views += 1;
         await this.konsultasiRepository.save(question);
         question.answers = question.answers.sort((a, b) => b.votes - a.votes || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        question.answers.forEach(answer => {
+            if (answer.replies) {
+                answer.replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            }
+        });
         return {
             question,
             answers: question.answers,
@@ -401,15 +412,105 @@ let KonsultasiService = class KonsultasiService {
             isBookmarked: !!bookmark,
         };
     }
+    async createReply(questionId, answerId, createReplyDto, userId) {
+        const question = await this.konsultasiRepository.findOne({
+            where: { id: questionId },
+        });
+        if (!question) {
+            throw new common_1.NotFoundException('Pertanyaan tidak ditemukan');
+        }
+        const answer = await this.answerRepository.findOne({
+            where: { id: answerId, konsultasiId: questionId },
+        });
+        if (!answer) {
+            throw new common_1.NotFoundException('Jawaban tidak ditemukan');
+        }
+        const user = await this.userRepository.findOne({
+            where: { id: Number(userId) },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('User tidak ditemukan');
+        }
+        const reply = this.replyRepository.create({
+            answerId,
+            authorId: Number(userId),
+            content: createReplyDto.content,
+        });
+        const savedReply = await this.replyRepository.save(reply);
+        savedReply.author = user;
+        return {
+            id: savedReply.id,
+            content: savedReply.content,
+            authorId: savedReply.authorId,
+            votes: savedReply.votes,
+            downvotes: savedReply.downvotes,
+            isVerified: savedReply.isVerified,
+            createdAt: savedReply.createdAt,
+            updatedAt: savedReply.updatedAt,
+        };
+    }
+    async voteReply(questionId, answerId, replyId, userId, vote) {
+        const reply = await this.replyRepository.findOne({
+            where: { id: replyId, answerId },
+        });
+        if (!reply) {
+            throw new common_1.NotFoundException('Balasan tidak ditemukan');
+        }
+        const numUserId = Number(userId);
+        const voters = reply.voters;
+        const existingVote = voters.find(v => v.userId === numUserId);
+        if (existingVote) {
+            if (existingVote.vote === vote) {
+                if (vote === 1) {
+                    reply.votes--;
+                }
+                else {
+                    reply.downvotes--;
+                }
+                reply.voters = voters.filter(v => v.userId !== numUserId);
+            }
+            else {
+                if (existingVote.vote === 1) {
+                    reply.votes--;
+                }
+                else {
+                    reply.downvotes--;
+                }
+                if (vote === 1) {
+                    reply.votes++;
+                }
+                else {
+                    reply.downvotes++;
+                }
+                existingVote.vote = vote;
+            }
+        }
+        else {
+            if (vote === 1) {
+                reply.votes++;
+            }
+            else {
+                reply.downvotes++;
+            }
+            voters.push({ userId: numUserId, vote });
+            reply.voters = voters;
+        }
+        await this.replyRepository.save(reply);
+        return { votes: reply.votes, downvotes: reply.downvotes };
+    }
 };
 exports.KonsultasiService = KonsultasiService;
 exports.KonsultasiService = KonsultasiService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(konsultasi_entity_1.Konsultasi)),
     __param(1, (0, typeorm_1.InjectRepository)(konsultasi_answer_entity_1.KonsultasiAnswer)),
-    __param(2, (0, typeorm_1.InjectRepository)(konsultasi_bookmark_entity_1.KonsultasiBookmark)),
-    __param(3, (0, typeorm_1.InjectRepository)(consultation_category_entity_1.ConsultationCategory)),
+    __param(2, (0, typeorm_1.InjectRepository)(konsultasi_answer_reply_entity_1.KonsultasiAnswerReply)),
+    __param(3, (0, typeorm_1.InjectRepository)(konsultasi_bookmark_entity_1.KonsultasiBookmark)),
+    __param(4, (0, typeorm_1.InjectRepository)(consultation_category_entity_1.ConsultationCategory)),
+    __param(5, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,

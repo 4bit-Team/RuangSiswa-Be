@@ -149,4 +149,11 @@ export class NewsController {
     await this.newsService.deleteComment(parseInt(commentId), req.user.id);
     return { message: 'Comment deleted successfully' };
   }
+
+  // Increment view count
+  @Post(':id/views')
+  async incrementViews(@Param('id') id: string) {
+    await this.newsService.incrementViews(parseInt(id));
+    return { message: 'View count incremented' };
+  }
 }

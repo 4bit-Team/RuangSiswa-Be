@@ -13,8 +13,10 @@ const konsultasi_controller_1 = require("./konsultasi.controller");
 const konsultasi_service_1 = require("./konsultasi.service");
 const konsultasi_entity_1 = require("./entities/konsultasi.entity");
 const konsultasi_answer_entity_1 = require("./entities/konsultasi-answer.entity");
+const konsultasi_answer_reply_entity_1 = require("./entities/konsultasi-answer-reply.entity");
 const konsultasi_bookmark_entity_1 = require("./entities/konsultasi-bookmark.entity");
 const consultation_category_entity_1 = require("../consultation-category/entities/consultation-category.entity");
+const user_entity_1 = require("../users/entities/user.entity");
 const toxic_filter_module_1 = require("../toxic-filter/toxic-filter.module");
 let KonsultasiModule = class KonsultasiModule {
 };
@@ -22,7 +24,7 @@ exports.KonsultasiModule = KonsultasiModule;
 exports.KonsultasiModule = KonsultasiModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([konsultasi_entity_1.Konsultasi, konsultasi_answer_entity_1.KonsultasiAnswer, konsultasi_bookmark_entity_1.KonsultasiBookmark, consultation_category_entity_1.ConsultationCategory]),
+            typeorm_1.TypeOrmModule.forFeature([konsultasi_entity_1.Konsultasi, konsultasi_answer_entity_1.KonsultasiAnswer, konsultasi_answer_reply_entity_1.KonsultasiAnswerReply, konsultasi_bookmark_entity_1.KonsultasiBookmark, consultation_category_entity_1.ConsultationCategory, user_entity_1.User]),
             toxic_filter_module_1.ToxicFilterModule,
         ],
         controllers: [konsultasi_controller_1.KonsultasiController],

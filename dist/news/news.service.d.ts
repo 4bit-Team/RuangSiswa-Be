@@ -46,4 +46,5 @@ export declare class NewsService {
         data: News[];
         total: number;
     }>;
+    incrementViews(id: number): Promise<News>;
 }

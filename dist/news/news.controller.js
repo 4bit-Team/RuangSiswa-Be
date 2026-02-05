@@ -70,6 +70,10 @@ let NewsController = class NewsController {
         await this.newsService.deleteComment(parseInt(commentId), req.user.id);
         return { message: 'Comment deleted successfully' };
     }
+    async incrementViews(id) {
+        await this.newsService.incrementViews(parseInt(id));
+        return { message: 'View count incremented' };
+    }
 };
 exports.NewsController = NewsController;
 __decorate([
@@ -192,6 +196,13 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], NewsController.prototype, "deleteComment", null);
+__decorate([
+    (0, common_1.Post)(':id/views'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], NewsController.prototype, "incrementViews", null);
 exports.NewsController = NewsController = __decorate([
     (0, common_1.Controller)('news'),
     __metadata("design:paramtypes", [news_service_1.NewsService])
