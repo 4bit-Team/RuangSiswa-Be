@@ -202,7 +202,7 @@ export class BimbinganService {
     referral_id: string,
     counselor_id: string,
     counselor_name: string,
-  ): Promise<BimbinganReferral> {
+  ): Promise<BimbinganReferral | null> {
     try {
       await this.referralRepo.update(
         { id: referral_id },
@@ -262,7 +262,7 @@ export class BimbinganService {
     hasil_akhir: string,
     follow_up_status?: string,
     follow_up_date?: string,
-  ): Promise<BimbinganSesi> {
+  ): Promise<BimbinganSesi | null> {
     try {
       await this.sesiRepo.update(
         { id: sesi_id },
@@ -421,7 +421,7 @@ export class BimbinganService {
     intervensi_id: string,
     hasil_intervensi: string,
     efektivitas: string,
-  ): Promise<BimbinganIntervensi> {
+  ): Promise<BimbinganIntervensi | null> {
     try {
       await this.intervensiRepo.update(
         { id: intervensi_id },

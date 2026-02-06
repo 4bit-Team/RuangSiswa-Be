@@ -169,7 +169,7 @@ export class TardinessService {
     try {
       const month = tahun_bulan || this.getCurrentYearMonth();
 
-      let summary = await this.summaryRepo.findOne({
+      let summary: TardinessSummary | Partial<TardinessSummary> | null = await this.summaryRepo.findOne({
         where: {
           student_id,
           tahun_bulan: month,

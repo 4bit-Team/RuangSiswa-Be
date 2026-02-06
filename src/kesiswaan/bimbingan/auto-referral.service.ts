@@ -363,22 +363,29 @@ export class AutoReferralService {
           orange: results.filter((r) => r.risk_level === 'orange').length,
         },
         by_source: {
-          violations: results.filter((r) => r.referral_source?.source === 'violations_escalation')
-            .length,
-          tardiness: results.filter((r) => r.referral_source?.source === 'tardiness_escalation')
-            .length,
-          attendance: results.filter((r) => r.referral_source?.source === 'attendance_escalation')
-            .length,
-          academic: results.filter(
-            (r) => r.referral_source?.source === 'academic_underperformance',
-          ).length,
+          violations: results.filter((r) => {
+            const src = typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source;
+            return src === 'violations_escalation';
+          }).length,
+          tardiness: results.filter((r) => {
+            const src = typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source;
+            return src === 'tardiness_escalation';
+          }).length,
+          attendance: results.filter((r) => {
+            const src = typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source;
+            return src === 'attendance_escalation';
+          }).length,
+          academic: results.filter((r) => {
+            const src = typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source;
+            return src === 'academic_underperformance';
+          }).length,
         },
         students: results.map((r) => ({
           id: r.id,
           student_id: r.student_id,
           student_name: r.student_name,
           risk_level: r.risk_level,
-          source: r.referral_source?.source,
+          source: typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source,
           status: r.status,
           referral_date: r.referral_date,
           assigned_to: r.counselor_name || 'Unassigned',
@@ -399,7 +406,7 @@ export class AutoReferralService {
     studentId: number,
     tahun: number,
     reason: string,
-  ): Promise<BimbinganReferral> {
+  ): Promise<BimbinganReferral | null> {
     try {
       const referral = await this.referralRepository.findOne({
         where: {

@@ -313,6 +313,9 @@ export class GuidanceNote {
   @Column({ type: 'json', nullable: true })
   attachments: string[]; // File paths of attached documents
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  status: string;
+
   @CreateDateColumn()
   created_at: Date;
 
@@ -383,6 +386,15 @@ export class GuidanceIntervention {
 
   @Column({ type: 'text', nullable: true })
   hasil_intervensi: string; // Alternative outcomes field
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  tanggal_evaluasi: string;
+
+  @Column({ type: 'int', nullable: true })
+  efektivitas: number;
+
+  @Column({ type: 'boolean', nullable: true })
+  orang_tua_hadir: boolean;
 
   @CreateDateColumn()
   created_at: Date;
@@ -467,8 +479,20 @@ export class GuidanceProgress {
   @Column({ type: 'int' })
   student_id: number;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  student_name: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  counselor_id: string;
+
   @Column({ type: 'date' })
   assessment_date: string; // YYYY-MM-DD (when progress was assessed)
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  tanggal_evaluasi: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  status_keseluruhan: string;
 
   // Pre/Post intervention comparison
   @Column({ type: 'int', nullable: true })
@@ -590,11 +614,20 @@ export class GuidanceReferral {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @Column({ type: 'text', nullable: true })
-  referral_source: string;
+  @Column({ type: 'json', nullable: true })
+  referral_source: { source: string; source_id: string; details: string } | null;
 
   @Column({ type: 'date', nullable: true })
   first_appointment_date: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  counselor_id: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  counselor_name: string;
+
+  @Column({ type: 'date', nullable: true })
+  assigned_date: string;
 
   @Column({ type: 'text', nullable: true })
   external_assessment_report: string; // Report from external agency
