@@ -1,5 +1,6 @@
 import { User } from '../../users/entities/user.entity';
 import { Konsultasi } from './konsultasi.entity';
+import { KonsultasiAnswerReply } from './konsultasi-answer-reply.entity';
 export declare class KonsultasiAnswer {
     id: string;
     konsultasiId: string;
@@ -19,5 +20,5 @@ export declare class KonsultasiAnswer {
     attachment: string | null;
     createdAt: Date;
     updatedAt: Date;
-    replies: any;
+    replies: KonsultasiAnswerReply[];
 }

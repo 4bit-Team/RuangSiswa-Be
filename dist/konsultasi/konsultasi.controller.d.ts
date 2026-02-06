@@ -18,6 +18,10 @@ export declare class KonsultasiController {
         question: import("./entities/konsultasi.entity").Konsultasi;
         answers: import("./entities/konsultasi-answer.entity").KonsultasiAnswer[];
     }>;
+    getUserAnswers(userId: string): Promise<{
+        data: import("./entities/konsultasi-answer.entity").KonsultasiAnswer[];
+        total: number;
+    }>;
     getAllQuestions(category?: string, sort?: 'trending' | 'newest' | 'unanswered', page?: number, limit?: number, search?: string): Promise<{
         data: import("./entities/konsultasi.entity").Konsultasi[];
         pagination: {
@@ -108,7 +112,7 @@ export declare class KonsultasiController {
             attachment: string | null;
             createdAt: Date;
             updatedAt: Date;
-            replies: any;
+            replies: import("./entities/konsultasi-answer-reply.entity").KonsultasiAnswerReply[];
         }[];
     }>;
     bookmarkQuestion(questionId: string, req: any): Promise<import("./entities/konsultasi-bookmark.entity").KonsultasiBookmark>;

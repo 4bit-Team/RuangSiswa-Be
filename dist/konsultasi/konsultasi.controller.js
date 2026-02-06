@@ -33,6 +33,9 @@ let KonsultasiController = class KonsultasiController {
     async getQuestionBySlug(slug) {
         return this.konsultasiService.findOneBySlug(slug);
     }
+    async getUserAnswers(userId) {
+        return this.konsultasiService.getUserAnswers(userId);
+    }
     async getAllQuestions(category, sort = 'trending', page = 1, limit = 20, search) {
         return this.konsultasiService.findAll({
             category,
@@ -102,6 +105,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], KonsultasiController.prototype, "getQuestionBySlug", null);
+__decorate([
+    (0, common_1.Get)('answers'),
+    __param(0, (0, common_1.Query)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], KonsultasiController.prototype, "getUserAnswers", null);
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)('category')),

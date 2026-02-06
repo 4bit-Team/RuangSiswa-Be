@@ -123,26 +123,47 @@ export class KonsultasiService {
     };
   }
 
+  // Normalize title same way frontend generateSlug does
+  private normalizeSlug(text: string): string {
+    return text
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+  }
+
   // Find one question by slug
   async findOneBySlug(slug: string) {
-    // Convert slug to words for flexible matching
-    const slugWords = slug.split('-').filter(w => w.length > 0);
-    
-    // Get all questions and find the best match
+    // Normalize incoming slug
+    const normalizedSlug = this.normalizeSlug(slug);
+
+    // Get all questions
     const questions = await this.konsultasiRepository
       .createQueryBuilder('k')
       .leftJoinAndSelect('k.author', 'author')
       .leftJoinAndSelect('k.category', 'category')
       .leftJoinAndSelect('k.answers', 'answers')
       .leftJoinAndSelect('answers.author', 'answer_author')
+      .leftJoinAndSelect('answers.replies', 'replies')
+      .leftJoinAndSelect('replies.author', 'replies_author')
       .orderBy('k.createdAt', 'DESC')
       .getMany();
 
-    // Find question where title contains all slug words
-    const question = questions.find(q => {
-      const titleLower = q.title.toLowerCase();
-      return slugWords.every(word => titleLower.includes(word));
+    // Find question with exact slug match (title normalized same way)
+    let question = questions.find(q => {
+      const titleSlug = this.normalizeSlug(q.title);
+      return titleSlug === normalizedSlug;
     });
+
+    // If not found, try partial match (all slug words in title)
+    if (!question) {
+      const slugWords = normalizedSlug.split('-').filter(w => w.length > 0);
+      question = questions.find(q => {
+        const titleLower = q.title.toLowerCase();
+        return slugWords.every(word => titleLower.includes(word));
+      });
+    }
 
     if (!question) {
       throw new NotFoundException('Pertanyaan tidak ditemukan');
@@ -156,6 +177,13 @@ export class KonsultasiService {
     question.answers = question.answers.sort(
       (a, b) => b.votes - a.votes || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
+
+    // Sort replies by creation date for each answer
+    question.answers.forEach(answer => {
+      if (answer.replies) {
+        answer.replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      }
+    });
 
     return {
       question,
@@ -537,6 +565,20 @@ export class KonsultasiService {
         bookmarkedAt: b.createdAt,
       })),
       total: bookmarks.length,
+    };
+  }
+
+  // Get user answers
+  async getUserAnswers(userId: string) {
+    const answers = await this.answerRepository.find({
+      where: { authorId: userId },
+      relations: ['konsultasi', 'author'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return {
+      data: answers,
+      total: answers.length,
     };
   }
 

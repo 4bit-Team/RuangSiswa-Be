@@ -13,6 +13,7 @@ exports.KonsultasiAnswer = void 0;
 const typeorm_1 = require("typeorm");
 const user_entity_1 = require("../../users/entities/user.entity");
 const konsultasi_entity_1 = require("./konsultasi.entity");
+const konsultasi_answer_reply_entity_1 = require("./konsultasi-answer-reply.entity");
 let KonsultasiAnswer = class KonsultasiAnswer {
     id;
     konsultasiId;
@@ -94,6 +95,10 @@ __decorate([
     (0, typeorm_1.UpdateDateColumn)(),
     __metadata("design:type", Date)
 ], KonsultasiAnswer.prototype, "updatedAt", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => konsultasi_answer_reply_entity_1.KonsultasiAnswerReply, reply => reply.answer),
+    __metadata("design:type", Array)
+], KonsultasiAnswer.prototype, "replies", void 0);
 exports.KonsultasiAnswer = KonsultasiAnswer = __decorate([
     (0, typeorm_1.Entity)('konsultasi_answers'),
     (0, typeorm_1.Index)('idx_konsultasi_answer_konsultasi', ['konsultasiId']),

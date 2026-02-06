@@ -100,26 +100,48 @@ let KonsultasiService = class KonsultasiService {
             answers: question.answers,
         };
     }
+    normalizeSlug(text) {
+        return text
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
     async findOneBySlug(slug) {
-        const slugWords = slug.split('-').filter(w => w.length > 0);
+        const normalizedSlug = this.normalizeSlug(slug);
         const questions = await this.konsultasiRepository
             .createQueryBuilder('k')
             .leftJoinAndSelect('k.author', 'author')
             .leftJoinAndSelect('k.category', 'category')
             .leftJoinAndSelect('k.answers', 'answers')
             .leftJoinAndSelect('answers.author', 'answer_author')
+            .leftJoinAndSelect('answers.replies', 'replies')
+            .leftJoinAndSelect('replies.author', 'replies_author')
             .orderBy('k.createdAt', 'DESC')
             .getMany();
-        const question = questions.find(q => {
-            const titleLower = q.title.toLowerCase();
-            return slugWords.every(word => titleLower.includes(word));
+        let question = questions.find(q => {
+            const titleSlug = this.normalizeSlug(q.title);
+            return titleSlug === normalizedSlug;
         });
+        if (!question) {
+            const slugWords = normalizedSlug.split('-').filter(w => w.length > 0);
+            question = questions.find(q => {
+                const titleLower = q.title.toLowerCase();
+                return slugWords.every(word => titleLower.includes(word));
+            });
+        }
         if (!question) {
             throw new common_1.NotFoundException('Pertanyaan tidak ditemukan');
         }
         question.views += 1;
         await this.konsultasiRepository.save(question);
         question.answers = question.answers.sort((a, b) => b.votes - a.votes || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        question.answers.forEach(answer => {
+            if (answer.replies) {
+                answer.replies.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+            }
+        });
         return {
             question,
             answers: question.answers,
@@ -402,6 +424,17 @@ let KonsultasiService = class KonsultasiService {
                 bookmarkedAt: b.createdAt,
             })),
             total: bookmarks.length,
+        };
+    }
+    async getUserAnswers(userId) {
+        const answers = await this.answerRepository.find({
+            where: { authorId: userId },
+            relations: ['konsultasi', 'author'],
+            order: { createdAt: 'DESC' },
+        });
+        return {
+            data: answers,
+            total: answers.length,
         };
     }
     async isBookmarked(questionId, userId) {

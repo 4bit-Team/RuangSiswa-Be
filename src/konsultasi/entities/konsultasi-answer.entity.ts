@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, Index, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, UpdateDateColumn, Index, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Konsultasi } from './konsultasi.entity';
+import { KonsultasiAnswerReply } from './konsultasi-answer-reply.entity';
 
 @Entity('konsultasi_answers')
 @Index('idx_konsultasi_answer_konsultasi', ['konsultasiId'])
@@ -53,5 +54,7 @@ export class KonsultasiAnswer {
 
   @UpdateDateColumn()
   updatedAt: Date;
-    replies: any;
+
+  @OneToMany(() => KonsultasiAnswerReply, reply => reply.answer)
+  replies: KonsultasiAnswerReply[];
 }

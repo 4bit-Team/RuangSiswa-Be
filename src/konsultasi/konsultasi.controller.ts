@@ -25,6 +25,12 @@ export class KonsultasiController {
     return this.konsultasiService.findOneBySlug(slug);
   }
 
+  // Get user's answers - MUST be before /:id route
+  @Get('answers')
+  async getUserAnswers(@Query('userId') userId: string) {
+    return this.konsultasiService.getUserAnswers(userId);
+  }
+
   // Get all questions with filtering and pagination
   @Get()
   async getAllQuestions(

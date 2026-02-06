@@ -38,6 +38,7 @@ export declare class KonsultasiService {
         question: Konsultasi;
         answers: KonsultasiAnswer[];
     }>;
+    private normalizeSlug;
     findOneBySlug(slug: string): Promise<{
         question: Konsultasi;
         answers: KonsultasiAnswer[];
@@ -99,7 +100,7 @@ export declare class KonsultasiService {
             attachment: string | null;
             createdAt: Date;
             updatedAt: Date;
-            replies: any;
+            replies: KonsultasiAnswerReply[];
         }[];
     }>;
     getStatistics(): Promise<{
@@ -139,6 +140,10 @@ export declare class KonsultasiService {
             createdAt: Date;
             updatedAt: Date;
         }[];
+        total: number;
+    }>;
+    getUserAnswers(userId: string): Promise<{
+        data: KonsultasiAnswer[];
         total: number;
     }>;
     isBookmarked(questionId: string, userId: string): Promise<{
