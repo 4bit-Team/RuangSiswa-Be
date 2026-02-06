@@ -105,7 +105,7 @@ export class TardinessAppeal {
   @Column({ type: 'varchar', length: 255, nullable: true })
   resolved_by: string; // BK staff who resolved
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   resolved_at: Date;
 
   @CreateDateColumn()

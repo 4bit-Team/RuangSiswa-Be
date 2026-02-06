@@ -125,13 +125,13 @@ export class GuidanceSession {
   referral_source_data: string; // JSON: original issue details
 
   // Scheduling
-  @Column({ type: 'datetime', nullable: false })
+  @Column({ type: 'timestamp', nullable: false })
   scheduled_date: Date;
 
   @Column({ type: 'time', nullable: true })
   scheduled_time: string; // HH:MM
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   actual_date: Date; // When session actually happened
 
   @Column({ type: 'int', nullable: true })
@@ -175,7 +175,7 @@ export class GuidanceSession {
   related_session_ids: string[]; // Other related sessions
 
   // Follow-up
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   next_session_date: Date;
 
   @Column({ type: 'boolean', default: false })
@@ -266,7 +266,7 @@ export class CaseNote {
   referral_reason: string;
 
   // Follow-up
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   follow_up_date: Date;
 
   @Column({ type: 'text', nullable: true })
@@ -357,13 +357,13 @@ export class GuidanceStatus {
   primary_bk_staff_name: string;
 
   // Dates
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   first_session_date: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   last_session_date: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   next_session_date: Date;
 
   // Additional tracking
@@ -439,7 +439,7 @@ export class GuidanceReferral {
   @Column({ type: 'varchar', length: 100, nullable: true })
   assigned_to_bk_name: string;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   assigned_date: Date;
 
   // Linked guidance session
@@ -447,10 +447,10 @@ export class GuidanceReferral {
   guidance_session_id: string;
 
   // Dates
-  @Column({ type: 'datetime', nullable: false })
+  @Column({ type: 'timestamp', nullable: false })
   referral_date: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   response_date: Date;
 
   @Column({ type: 'text', nullable: true })
@@ -502,13 +502,13 @@ export class GuidanceProgress {
   progress_percentage: number; // 0-100
 
   // Timeline
-  @Column({ type: 'datetime', nullable: false })
+  @Column({ type: 'timestamp', nullable: false })
   start_date: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   expected_resolution_date: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   actual_resolution_date: Date;
 
   // Tracking data
