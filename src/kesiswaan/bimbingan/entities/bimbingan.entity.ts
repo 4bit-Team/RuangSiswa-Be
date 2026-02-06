@@ -660,7 +660,6 @@ export class GuidanceReferral {
  */
 @Entity('guidance_statistics')
 @Index(['tahun'])
-@Index(['risk_level'])
 export class GuidanceStatistics {
   @PrimaryGeneratedColumn('uuid')
   id: string;
