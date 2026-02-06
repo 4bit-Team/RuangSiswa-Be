@@ -364,32 +364,56 @@ export class AutoReferralService {
         },
         by_source: {
           violations: results.filter((r) => {
-            const src = typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source;
-            return src === 'violations_escalation';
+            try {
+              const src = r.referral_source ? (JSON.parse(r.referral_source) as any).source : '';
+              return src === 'violations_escalation';
+            } catch {
+              return false;
+            }
           }).length,
           tardiness: results.filter((r) => {
-            const src = typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source;
-            return src === 'tardiness_escalation';
+            try {
+              const src = r.referral_source ? (JSON.parse(r.referral_source) as any).source : '';
+              return src === 'tardiness_escalation';
+            } catch {
+              return false;
+            }
           }).length,
           attendance: results.filter((r) => {
-            const src = typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source;
-            return src === 'attendance_escalation';
+            try {
+              const src = r.referral_source ? (JSON.parse(r.referral_source) as any).source : '';
+              return src === 'attendance_escalation';
+            } catch {
+              return false;
+            }
           }).length,
           academic: results.filter((r) => {
-            const src = typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source;
-            return src === 'academic_underperformance';
+            try {
+              const src = r.referral_source ? (JSON.parse(r.referral_source) as any).source : '';
+              return src === 'academic_underperformance';
+            } catch {
+              return false;
+            }
           }).length,
         },
-        students: results.map((r) => ({
-          id: r.id,
-          student_id: r.student_id,
-          student_name: r.student_name,
-          risk_level: r.risk_level,
-          source: typeof r.referral_source === 'object' ? r.referral_source?.source : r.referral_source,
-          status: r.status,
-          referral_date: r.referral_date,
-          assigned_to: r.counselor_name || 'Unassigned',
-        })),
+        students: results.map((r) => {
+          let src = '';
+          try {
+            src = r.referral_source ? (JSON.parse(r.referral_source) as any).source : '';
+          } catch {
+            src = '';
+          }
+          return {
+            id: r.id,
+            student_id: r.student_id,
+            student_name: r.student_name,
+            risk_level: r.risk_level,
+            source: src,
+            status: r.status,
+            referral_date: r.referral_date,
+            assigned_to: r.counselor_name || 'Unassigned',
+          };
+        }),
       };
     } catch (error) {
       this.logger.error(`Failed to get at-risk students summary: ${error.message}`);

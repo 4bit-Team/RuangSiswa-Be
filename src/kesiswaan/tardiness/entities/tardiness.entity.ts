@@ -17,9 +17,9 @@ import {
  * Tracks when a student was late, by how many minutes, and evidence
  */
 @Entity('tardiness_records')
-@Index(['student_id', 'tanggal'], { unique: true })
-@Index(['class_id', 'tanggal'])
-@Index(['student_id', 'status'])
+@Index('idx_tardiness_student_tanggal', ['student_id', 'tanggal'], { unique: true })
+@Index('idx_tardiness_class_tanggal', ['class_id', 'tanggal'])
+@Index('idx_tardiness_student_status', ['student_id', 'status'])
 export class TardinessRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -74,9 +74,9 @@ export class TardinessRecord {
  * Tracks appeal status and BK decision
  */
 @Entity('tardiness_appeals')
-@Index(['tardiness_record_id'])
-@Index(['student_id', 'status'])
-@Index(['is_resolved'])
+@Index('idx_appeal_record', ['tardiness_record_id'])
+@Index('idx_appeal_student_status', ['student_id', 'status'])
+@Index('idx_appeal_resolved', ['is_resolved'])
 export class TardinessAppeal {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -123,9 +123,9 @@ export class TardinessAppeal {
  * Used to trigger alerts and violations
  */
 @Entity('tardiness_summaries')
-@Index(['student_id', 'tahun_bulan'], { unique: true })
-@Index(['is_flagged'])
-@Index(['count_total', 'threshold_status'])
+@Index('idx_tardsumm_student_month', ['student_id', 'tahun_bulan'], { unique: true })
+@Index('idx_tardsumm_flagged', ['is_flagged'])
+@Index('idx_tardsumm_count_threshold', ['count_total', 'threshold_status'])
 export class TardinessSummary {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -174,8 +174,8 @@ export class TardinessSummary {
  * Alerts counselors and administrators of high-risk patterns
  */
 @Entity('tardiness_alerts')
-@Index(['student_id', 'alert_type'])
-@Index(['is_resolved'])
+@Index('idx_tardalert_student_type', ['student_id', 'alert_type'])
+@Index('idx_tardalert_resolved', ['is_resolved'])
 export class TardinessAlert {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -195,8 +195,8 @@ export class TardinessAlert {
   @Column({ type: 'varchar', length: 50 })
   severity: string; // warning, critical
 
-  @Column({ type: 'json', nullable: true })
-  alert_data: any; // JSON storing alert context (current month count, previous month, etc)
+  @Column({ type: 'text', nullable: true })
+  alert_data: string; // JSON string storing alert context (current month count, previous month, etc)
 
   @Column({ type: 'boolean', default: false })
   is_resolved: boolean;
@@ -221,7 +221,7 @@ export class TardinessAlert {
  * Helps with early intervention
  */
 @Entity('tardiness_patterns')
-@Index(['student_id'])
+@Index('idx_pattern_student', ['student_id'])
 export class TardinessPattern {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -1,8 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('attendance_records')
-@Index(['student_id', 'tanggal'], { unique: true })
-@Index(['class_id', 'tanggal'])
+@Index('idx_attendance_student_tanggal', ['student_id', 'tanggal'], { unique: true })
+@Index('idx_attendance_class_tanggal', ['class_id', 'tanggal'])
 export class AttendanceRecord {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;

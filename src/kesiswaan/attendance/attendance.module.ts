@@ -4,11 +4,9 @@ import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { AttendanceController } from './attendance.controller';
 import { AttendanceService } from './attendance.service';
-import {
-  AttendanceRecord,
-  AttendanceSummary,
-  AttendanceAlert,
-} from './entities/attendance.entity';
+import { AttendanceRecord } from './entities/attendance-record.entity';
+import { AttendanceSummary } from './entities/attendance-summary.entity';
+import { AttendanceAlert } from './entities/attendance-alert.entity';
 import { WalasApiClient } from '../../walas/walas-api.client';
 
 @Module({

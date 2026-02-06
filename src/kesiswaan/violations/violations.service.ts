@@ -273,29 +273,32 @@ export class ViolationService {
         progression = this.progressionRepo.create({ student_id, tahun, current_sp_level: 0 });
       }
 
+      // Ensure progression is defined for type safety
+      const prog = progression!;
+
       // Count unprocessed violations
       const unprocessedViolations = await this.getUnprocessedViolations(student_id);
       const totalViolations = await this.violationRepo.count({
         where: { student_id },
       });
 
-      progression.violation_count = totalViolations;
+      prog.violation_count = totalViolations;
 
       // Check SP trigger thresholds
       let shouldGenerateSp = false;
-      let nextSpLevel = progression.current_sp_level + 1;
+      let nextSpLevel = prog.current_sp_level + 1;
 
       // Determine which SP to generate based on accumulated violations
-      if (totalViolations >= 3 && progression.current_sp_level === 0) {
+      if (totalViolations >= 3 && prog.current_sp_level === 0) {
         shouldGenerateSp = true;
         nextSpLevel = 1;
-      } else if (totalViolations >= 5 && progression.current_sp_level < 2) {
+      } else if (totalViolations >= 5 && prog.current_sp_level < 2) {
         shouldGenerateSp = true;
         nextSpLevel = 2;
-      } else if (totalViolations >= 7 && progression.current_sp_level < 3) {
+      } else if (totalViolations >= 7 && prog.current_sp_level < 3) {
         shouldGenerateSp = true;
         nextSpLevel = 3;
-      } else if (totalViolations >= 9 && progression.current_sp_level === 3) {
+      } else if (totalViolations >= 9 && prog.current_sp_level === 3) {
         // Trigger expulsion after SP3
         shouldGenerateSp = true;
         nextSpLevel = 4; // This means expulsion
@@ -309,24 +312,24 @@ export class ViolationService {
       const spLetter = await this.generateSpLetter(student_id, nextSpLevel, unprocessedViolations);
 
       // Update progression
-      progression.current_sp_level = nextSpLevel === 4 ? 3 : nextSpLevel;
-      if (nextSpLevel === 1) progression.sp1_issued_count++;
-      if (nextSpLevel === 2) progression.sp2_issued_count++;
-      if (nextSpLevel === 3) progression.sp3_issued_count++;
+      prog.current_sp_level = nextSpLevel === 4 ? 3 : nextSpLevel;
+      if (nextSpLevel === 1) prog.sp1_issued_count++;
+      if (nextSpLevel === 2) prog.sp2_issued_count++;
+      if (nextSpLevel === 3) prog.sp3_issued_count++;
 
-      progression.last_sp_date = new Date().toISOString().split('T')[0];
-      if (!progression.first_sp_date) {
-        progression.first_sp_date = progression.last_sp_date;
+      prog.last_sp_date = new Date().toISOString().split('T')[0];
+      if (!prog.first_sp_date) {
+        prog.first_sp_date = prog.last_sp_date;
       }
 
       // If expulsion, mark it
       if (nextSpLevel === 4) {
-        progression.is_expelled = true;
-        progression.expulsion_date = new Date().toISOString().split('T')[0];
-        progression.reason_if_expelled = 'SP3_escalation';
+        prog.is_expelled = true;
+        prog.expulsion_date = new Date().toISOString().split('T')[0];
+        prog.reason_if_expelled = 'SP3_escalation';
       }
 
-      await this.progressionRepo.save(progression);
+      await this.progressionRepo.save(prog);
 
       return spLetter;
     } catch (error) {
@@ -380,7 +383,7 @@ export class ViolationService {
         sp_type: 'PEL',
         tahun,
         violations_text: violationsText,
-        violation_ids: violations.map((v) => v.id),
+        violation_ids: JSON.stringify(violations.map((v) => v.id)),
         consequences: consequencesMap[spLevel] || consequencesMap[1],
         tanggal_sp: new Date().toISOString().split('T')[0],
         status: 'issued',
@@ -393,10 +396,10 @@ export class ViolationService {
       // Mark violations as processed
       await this.violationRepo.update(
         { id: violations[0].id },
-        { is_processed: true, sp_letter_id: saved.id },
+        { is_processed: true, sp_letter_id: saved[0]?.id || saved.id },
       );
 
-      return saved;
+      return Array.isArray(saved) ? saved[0] : saved;
     } catch (error) {
       this.logger.error(`Failed to generate SP letter: ${error.message}`);
       throw error;

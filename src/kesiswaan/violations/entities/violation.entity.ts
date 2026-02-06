@@ -45,9 +45,9 @@ export class ViolationCategory {
  * Individual violation records for students
  */
 @Entity('violations')
-@Index(['student_id', 'created_at'])
-@Index(['student_id', 'violation_category_id'])
-@Index(['is_processed'])
+@Index('idx_violation_student_created', ['student_id', 'created_at'])
+@Index('idx_violation_student_category', ['student_id', 'violation_category_id'])
+@Index('idx_violation_processed', ['is_processed'])
 export class Violation {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -100,10 +100,10 @@ export class Violation {
  * Auto-generated warning letters based on accumulated violations
  */
 @Entity('sp_letters')
-@Index(['student_id', 'sp_level'])
-@Index(['student_id', 'tahun'])
-@Index(['status'])
-@Index(['is_signed'])
+@Index('idx_sp_student_level', ['student_id', 'sp_level'])
+@Index('idx_sp_student_tahun', ['student_id', 'tahun'])
+@Index('idx_sp_status', ['status'])
+@Index('idx_sp_signed', ['is_signed'])
 export class SpLetter {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -135,8 +135,8 @@ export class SpLetter {
   @Column({ type: 'text' })
   violations_text: string; // Comma-separated list of violation descriptions included in this SP
 
-  @Column({ type: 'json' })
-  violation_ids: string[]; // Array of violation IDs included
+  @Column({ type: 'text', nullable: true })
+  violation_ids: string; // JSON array of violation IDs included as string
 
   @Column({ type: 'text' })
   consequences: string; // Sanksi/consequences for this SP level
@@ -190,8 +190,8 @@ export class SpLetter {
  * Determines current SP level and when to auto-escalate
  */
 @Entity('sp_progressions')
-@Index(['student_id', 'tahun'], { unique: true })
-@Index(['current_sp_level'])
+@Index('idx_spprog_student_tahun', ['student_id', 'tahun'], { unique: true })
+@Index('idx_spprog_level', ['current_sp_level'])
 export class SpProgression {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -247,8 +247,8 @@ export class SpProgression {
  * Students can submit excuses/reasons for violations (similar to tardiness appeals)
  */
 @Entity('violation_excuses')
-@Index(['violation_id'])
-@Index(['student_id', 'status'])
+@Index('idx_excuse_violation', ['violation_id'])
+@Index('idx_excuse_student_status', ['student_id', 'status'])
 export class ViolationExcuse {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -292,8 +292,8 @@ export class ViolationExcuse {
  * Cached statistics for performance (dashboard queries)
  */
 @Entity('violation_statistics')
-@Index(['student_id', 'tahun'], { unique: true })
-@Index(['total_violations'])
+@Index('idx_vstat_student_tahun', ['student_id', 'tahun'], { unique: true })
+@Index('idx_vstat_total', ['total_violations'])
 export class ViolationStatistics {
   @PrimaryGeneratedColumn('uuid')
   id: string;

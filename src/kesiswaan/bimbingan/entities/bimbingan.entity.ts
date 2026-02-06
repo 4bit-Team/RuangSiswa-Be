@@ -22,8 +22,8 @@ import {
  * Examples: Attendance issues, Academic problems, Behavioral issues, Social problems, etc.
  */
 @Entity('guidance_categories')
-@Index(['code'], { unique: true })
-@Index(['is_active'])
+@Index('idx_guidance_code', ['code'], { unique: true })
+@Index('idx_guidance_active', ['is_active'])
 export class GuidanceCategory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -58,10 +58,10 @@ export class GuidanceCategory {
  * Created automatically from: excessive absences (Fitur 1), tardiness (Fitur 2), or violations (Fitur 3)
  */
 @Entity('guidance_cases')
-@Index(['student_id', 'tahun'])
-@Index(['status'])
-@Index(['risk_level'])
-@Index(['created_at'])
+@Index('idx_guidance_case_student_tahun', ['student_id', 'tahun'])
+@Index('idx_guidance_case_status', ['status'])
+@Index('idx_guidance_case_risk', ['risk_level'])
+@Index('idx_guidance_case_created', ['created_at'])
 export class GuidanceCase {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -172,9 +172,9 @@ export class GuidanceCase {
  * Scheduled meetings between BK staff and student
  */
 @Entity('guidance_sessions')
-@Index(['guidance_case_id'])
-@Index(['student_id', 'session_date'])
-@Index(['status'])
+@Index('idx_session_case', ['guidance_case_id'])
+@Index('idx_session_student_date', ['student_id', 'session_date'])
+@Index('idx_session_status', ['status'])
 export class GuidanceSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -278,9 +278,9 @@ export class GuidanceSession {
  * Detailed documentation of observations and progress
  */
 @Entity('guidance_notes')
-@Index(['guidance_case_id'])
-@Index(['created_by'])
-@Index(['created_at'])
+@Index('idx_note_case', ['guidance_case_id'])
+@Index('idx_note_by', ['created_by'])
+@Index('idx_note_created', ['created_at'])
 export class GuidanceNote {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -315,8 +315,8 @@ export class GuidanceNote {
   created_by_role: string; // "BK", "Teacher", "Parent"
 
   // Attachments
-  @Column({ type: 'json', nullable: true })
-  attachments: string[]; // File paths of attached documents
+  @Column({ type: 'text', nullable: true })
+  attachments: string; // JSON array of file paths of attached documents
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   status: string;
@@ -333,9 +333,9 @@ export class GuidanceNote {
  * Examples: Career counseling, Academic tutoring, Anger management, etc.
  */
 @Entity('guidance_interventions')
-@Index(['guidance_case_id'])
-@Index(['student_id'])
-@Index(['status'])
+@Index('idx_intervention_case', ['guidance_case_id'])
+@Index('idx_intervention_student', ['student_id'])
+@Index('idx_intervention_status', ['status'])
 export class GuidanceIntervention {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -413,9 +413,9 @@ export class GuidanceIntervention {
  * Important for parental involvement in guidance process
  */
 @Entity('guidance_parent_communications')
-@Index(['guidance_case_id'])
-@Index(['student_id'])
-@Index(['communication_date'])
+@Index('idx_comm_case', ['guidance_case_id'])
+@Index('idx_comm_student', ['student_id'])
+@Index('idx_comm_date', ['communication_date'])
 export class GuidanceParentCommunication {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -469,8 +469,8 @@ export class GuidanceParentCommunication {
  * Measures improvement in student behavior, attendance, grades
  */
 @Entity('guidance_progress')
-@Index(['guidance_case_id'])
-@Index(['student_id', 'assessment_date'])
+@Index('idx_progress_case', ['guidance_case_id'])
+@Index('idx_progress_student_date', ['student_id', 'assessment_date'])
 export class GuidanceProgress {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -560,9 +560,9 @@ export class GuidanceProgress {
  * When student needs specialized help (psychologist, medical, etc.)
  */
 @Entity('guidance_referrals')
-@Index(['student_id', 'tahun'])
-@Index(['referral_status'])
-@Index(['risk_level'])
+@Index('idx_referral_student_tahun', ['student_id', 'tahun'])
+@Index('idx_referral_status', ['referral_status'])
+@Index('idx_referral_risk', ['risk_level'])
 export class GuidanceReferral {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -619,8 +619,8 @@ export class GuidanceReferral {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @Column({ type: 'json', nullable: true })
-  referral_source: { source: string; source_id: string; details: string } | null;
+  @Column({ type: 'text', nullable: true })
+  referral_source: string; // JSON object as string: { source, source_id, details }
 
   @Column({ type: 'date', nullable: true })
   first_appointment_date: string;
@@ -655,7 +655,7 @@ export class GuidanceReferral {
  * Cached for performance optimization
  */
 @Entity('guidance_statistics')
-@Index(['tahun'])
+@Index('idx_stat_tahun', ['tahun'])
 export class GuidanceStatistics {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -714,8 +714,8 @@ export class GuidanceStatistics {
  * Student Guidance Ability/Skill Assessment
  */
 @Entity('guidance_abilities')
-@Index(['guidance_case_id'])
-@Index(['skill_type'])
+@Index('idx_ability_case', ['guidance_case_id'])
+@Index('idx_ability_skill', ['skill_type'])
 export class GuidanceAbility {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -743,8 +743,8 @@ export class GuidanceAbility {
  * Guidance Goals/Targets
  */
 @Entity('guidance_targets')
-@Index(['guidance_case_id'])
-@Index(['status'])
+@Index('idx_target_case', ['guidance_case_id'])
+@Index('idx_target_status', ['status'])
 export class GuidanceTarget {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -775,8 +775,8 @@ export class GuidanceTarget {
  * Guidance Case Status History
  */
 @Entity('guidance_statuses')
-@Index(['student_id', 'tahun'])
-@Index(['status_type'])
+@Index('idx_gstatus_student_tahun', ['student_id', 'tahun'])
+@Index('idx_gstatus_type', ['status_type'])
 export class GuidanceStatus {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -120,16 +120,18 @@ export class BimbinganService {
     try {
       const referral = this.referralRepo.create({
         ...dto,
+        referral_source: typeof dto.referral_source === 'object' ? JSON.stringify(dto.referral_source) : dto.referral_source,
         status: 'pending',
         referral_date: new Date().toISOString().split('T')[0],
       });
 
       const saved = await this.referralRepo.save(referral);
+      const result = Array.isArray(saved) ? saved[0] : saved;
 
       // Update or create status record
       await this.updateStatus(dto.student_id, dto.tahun);
 
-      return saved;
+      return result;
     } catch (error) {
       this.logger.error(`Failed to create referral: ${error.message}`);
       throw error;

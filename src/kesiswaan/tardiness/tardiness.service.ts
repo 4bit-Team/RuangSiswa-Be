@@ -385,11 +385,11 @@ export class TardinessService {
               alert_type: 'high_tardiness',
               description: `Student has ${summary.count_total} tardiness incidents in ${currentMonth}`,
               severity: summary.count_total >= 5 ? 'critical' : 'warning',
-              alert_data: {
+              alert_data: JSON.stringify({
                 month: currentMonth,
                 count_total: summary.count_total,
                 total_menit: summary.total_menit,
-              },
+              }),
               is_resolved: false,
             });
 
