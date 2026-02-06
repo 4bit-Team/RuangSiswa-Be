@@ -100,7 +100,7 @@ export class AttendanceController {
   @Get(':studentId/history')
   async history(@Param('studentId') studentId: number) {
     try {
-      const histories = [];
+      const histories: any[] = [];
       const now = new Date();
 
       for (let i = 5; i >= 0; i--) {

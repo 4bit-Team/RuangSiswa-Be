@@ -69,8 +69,15 @@ export class CreateAttendanceTables1707161600000 implements MigrationInterface {
           },
         ],
         indices: [
-          new Index('idx_student_date', ['student_id', 'tanggal'], { isUnique: true }),
-          new Index('idx_class_date', ['class_id', 'tanggal']),
+          {
+            name: 'idx_student_date',
+            columnNames: ['student_id', 'tanggal'],
+            isUnique: true,
+          },
+          {
+            name: 'idx_class_date',
+            columnNames: ['class_id', 'tanggal'],
+          },
         ],
       }),
       true,
@@ -159,10 +166,15 @@ export class CreateAttendanceTables1707161600000 implements MigrationInterface {
           },
         ],
         indices: [
-          new Index('idx_student_month', ['student_id', 'tahun_bulan'], {
+          {
+            name: 'idx_student_month',
+            columnNames: ['student_id', 'tahun_bulan'],
             isUnique: true,
-          }),
-          new Index('idx_flagged', ['is_flagged']),
+          },
+          {
+            name: 'idx_flagged',
+            columnNames: ['is_flagged'],
+          },
         ],
       }),
       true,
@@ -224,8 +236,14 @@ export class CreateAttendanceTables1707161600000 implements MigrationInterface {
           },
         ],
         indices: [
-          new Index('idx_student_alert', ['student_id', 'alert_type']),
-          new Index('idx_unresolved', ['is_resolved']),
+          {
+            name: 'idx_student_alert',
+            columnNames: ['student_id', 'alert_type'],
+          },
+          {
+            name: 'idx_unresolved',
+            columnNames: ['is_resolved'],
+          },
         ],
       }),
       true,

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { BimbinganReferral } from './entities/bimbingan-referral.entity';
+import { BimbinganReferral } from './entities/bimbingan.entity';
 import { BimbinganService } from './bimbingan.service';
 
 /**
@@ -73,10 +73,8 @@ export class AutoReferralService {
         is_urgent: spLevel === 'SP3',
         referral_source: {
           source: 'violations_escalation',
-          source_id: null,
-          sp_level: spLevel,
-          violation_count: violationCount,
-          details: violationDetails,
+          source_id: '',
+          details: `SP ${spLevel} issued with ${violationCount} total violations. Details: ${violationDetails}`,
         },
         notes: `Auto-generated referral from SP ${spLevel} escalation. Student has ${violationCount} total violations.`,
       };
@@ -143,9 +141,8 @@ export class AutoReferralService {
         is_urgent: riskLevel === 'red',
         referral_source: {
           source: 'tardiness_escalation',
-          source_id: null,
-          tardiness_count: tardinessCount,
-          rejected_appeal_count: rejectedAppealCount,
+          source_id: '',
+          details: `Tardiness records: ${tardinessCount}, Rejected appeals: ${rejectedAppealCount}`,
         },
         notes: `Auto-generated from repeated tardiness. ${tardinessCount} total tardiness records with ${rejectedAppealCount} rejected appeals.`,
       };
@@ -217,10 +214,8 @@ export class AutoReferralService {
         is_urgent: riskLevel === 'red',
         referral_source: {
           source: 'attendance_escalation',
-          source_id: null,
-          attendance_rate: attendanceRate,
-          total_absences: totalAbsences,
-          total_days_in_school: totalDaysInSchool,
+          source_id: '',
+          details: `Attendance rate: ${attendanceRate.toFixed(2)}%, Absences: ${totalAbsences} of ${totalDaysInSchool} days`,
         },
         notes: `Auto-generated from chronic absence. Attendance rate ${attendanceRate.toFixed(2)}% with ${totalAbsences} absences out of ${totalDaysInSchool} school days.`,
       };
@@ -289,9 +284,8 @@ export class AutoReferralService {
         is_urgent: riskLevel === 'red',
         referral_source: {
           source: 'academic_underperformance',
-          source_id: null,
-          gpa,
-          failing_subjects_count: failingSubjectsCount,
+          source_id: '',
+          details: `GPA: ${gpa.toFixed(2)}, Failing subjects: ${failingSubjectsCount}`,
         },
         notes: `Auto-generated from academic underperformance. GPA ${gpa.toFixed(2)} with ${failingSubjectsCount} failing subjects.`,
       };

@@ -623,3 +623,105 @@ export class GuidanceStatistics {
   @UpdateDateColumn()
   updated_at: Date;
 }
+
+/**
+ * Student Guidance Ability/Skill Assessment
+ */
+@Entity('guidance_abilities')
+@Index(['guidance_case_id'])
+@Index(['skill_type'])
+export class GuidanceAbility {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  skill_type: string; // e.g., "Communication", "Problem Solving", "Self Control"
+
+  @Column({ type: 'int', default: 1 })
+  proficiency_level: number; // 1-5 scale
+
+  @Column({ type: 'text', nullable: true })
+  assessment_notes: string;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * Guidance Goals/Targets
+ */
+@Entity('guidance_targets')
+@Index(['guidance_case_id'])
+@Index(['status'])
+export class GuidanceTarget {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'text' })
+  target_description: string;
+
+  @Column({ type: 'varchar', length: 50, default: 'pending' })
+  status: string; // pending, in_progress, completed, failed
+
+  @Column({ type: 'date', nullable: true })
+  target_date: Date;
+
+  @Column({ type: 'int', default: 0 })
+  progress_percentage: number;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * Guidance Case Status History
+ */
+@Entity('guidance_statuses')
+@Index(['guidance_case_id'])
+@Index(['status_type'])
+export class GuidanceStatus {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  status_type: string; // open, in_progress, resolved, closed
+
+  @Column({ type: 'varchar', length: 50 })
+  previous_status: string;
+
+  @Column({ type: 'text', nullable: true })
+  status_notes: string;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+// Export aliases for backward compatibility
+export type BimbinganCategory = GuidanceCategory;
+export type BimbinganReferral = GuidanceReferral;
+export type BimbinganSesi = GuidanceSession;
+export type BimbinganCatat = GuidanceNote;
+export type BimbinganIntervensi = GuidanceIntervention;
+export type BimbinganPerkembangan = GuidanceProgress;
+export type BimbinganAbility = GuidanceAbility;
+export type BimbinganTarget = GuidanceTarget;
+export type BimbinganStatus = GuidanceStatus;
+export type BimbinganStatistik = GuidanceStatistics;

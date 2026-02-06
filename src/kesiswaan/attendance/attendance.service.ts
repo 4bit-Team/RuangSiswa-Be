@@ -56,7 +56,7 @@ export class AttendanceService {
 
       let syncedCount = 0;
       let failedCount = 0;
-      const errors = [];
+      const errors: any[] = [];
 
       // Process setiap record
       for (const record of walasData.data) {
@@ -249,9 +249,11 @@ export class AttendanceService {
       const allStudents = await this.getAllStudents(); // Implementation depends on your setup
 
       for (const student of allStudents) {
+        if (!student || !student.id) continue;
+        
         const summary = await this.getAttendanceSummary(student.id, month);
 
-        if (summary.is_flagged) {
+        if (summary && summary.is_flagged) {
           // Check if alert already exists
           const existing = await this.attendanceAlertRepo.findOne({
             where: {

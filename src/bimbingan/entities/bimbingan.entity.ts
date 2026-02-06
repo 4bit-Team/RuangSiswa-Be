@@ -291,7 +291,7 @@ export class CaseNote {
  */
 @Entity('guidance_statuses')
 @Index(['student_id', 'tahun'])
-@Index({ name: 'idx_student_year_unique', columns: ['student_id', 'tahun'], unique: true })
+@Index('idx_student_year_unique', ['student_id', 'tahun'], { unique: true })
 export class GuidanceStatus {
   @PrimaryGeneratedColumn('uuid')
   id: string;

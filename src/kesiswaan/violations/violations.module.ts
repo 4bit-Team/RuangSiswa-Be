@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ViolationsService } from './violations.service';
+import { ViolationService } from './violations.service';
 import { ViolationsController } from './violations.controller';
 import { SpPdfService } from './sp-pdf.service';
 import {
@@ -24,7 +24,7 @@ import {
     ]),
   ],
   controllers: [ViolationsController],
-  providers: [ViolationsService, SpPdfService],
-  exports: [ViolationsService, SpPdfService],
+  providers: [ViolationService, SpPdfService],
+  exports: [ViolationService, SpPdfService],
 })
 export class ViolationsModule {}

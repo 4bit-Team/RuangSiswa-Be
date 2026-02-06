@@ -13,7 +13,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { ViolationService } from './violations.service';
 import { SpPdfService } from './sp-pdf.service';
 import { currentUser } from 'src/auth/decorators/current-user.decorator';
@@ -97,7 +97,7 @@ export class ViolationsController {
     @Query('student_id') student_id?: number,
     @Query('class_id') class_id?: number,
     @Query('category_id') category_id?: string,
-    @Query('processed') processed?: boolean,
+    @Query('processed') processed?: string,
     @Query('date_from') date_from?: string,
     @Query('date_to') date_to?: string,
     @Query('page') page?: number,
@@ -338,7 +338,7 @@ export class ViolationsController {
   async getExcuses(
     @Query('student_id') student_id?: number,
     @Query('status') status?: string,
-    @Query('is_resolved') is_resolved?: boolean,
+    @Query('is_resolved') is_resolved?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {

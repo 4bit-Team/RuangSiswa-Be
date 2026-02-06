@@ -165,7 +165,7 @@ export class TardinessService {
   async getTardinessSummary(
     student_id: number,
     tahun_bulan?: string,
-  ): Promise<TardinessSummary | null> {
+  ): Promise<TardinessSummary | Partial<TardinessSummary> | null> {
     try {
       const month = tahun_bulan || this.getCurrentYearMonth();
 
@@ -298,7 +298,7 @@ export class TardinessService {
   /**
    * Review and respond to appeal (BK staff action)
    */
-  async reviewAppeal(dto: ReviewAppealDto): Promise<TardinessAppeal> {
+  async reviewAppeal(dto: ReviewAppealDto): Promise<TardinessAppeal | null> {
     try {
       const appeal = await this.appealRepo.findOne({
         where: { id: dto.appeal_id },
@@ -441,7 +441,7 @@ export class TardinessService {
   /**
    * Resolve alert (mark as handled by counselor)
    */
-  async resolveAlert(alert_id: string, resolved_by: string): Promise<TardinessAlert> {
+  async resolveAlert(alert_id: string, resolved_by: string): Promise<TardinessAlert | null> {
     try {
       await this.alertRepo.update(
         { id: alert_id },
@@ -496,7 +496,7 @@ export class TardinessService {
         if (count >= 2) {
           // At least 2 instances
           patterns.push({
-            id: undefined,
+            id: `pattern_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             student_id,
             pattern_type: 'day_of_week',
             pattern_description: `Often late on ${dayNames[parseInt(day)]}`,
@@ -514,7 +514,7 @@ export class TardinessService {
 
       if (maxMinutes - minMinutes <= 5 && maxMinutes >= 10) {
         patterns.push({
-          id: undefined,
+          id: `pattern_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           student_id,
           pattern_type: 'time_period',
           pattern_description: `Consistently ${minMinutes}-${maxMinutes} minutes late`,
@@ -654,7 +654,7 @@ export class TardinessService {
       total_menit,
       threshold_status,
       is_flagged,
-      reason_if_flagged: is_flagged ? `${count_total} tardiness incidents recorded` : null,
+      reason_if_flagged: is_flagged ? `${count_total} tardiness incidents recorded` : undefined,
     };
   }
 }

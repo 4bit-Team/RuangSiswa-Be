@@ -267,6 +267,11 @@ export class ViolationService {
 
       // Get student's progression
       let progression = await this.getSpProgression(student_id, tahun);
+      
+      // If no progression exists, create a new one
+      if (!progression) {
+        progression = this.progressionRepo.create({ student_id, tahun, current_sp_level: 0 });
+      }
 
       // Count unprocessed violations
       const unprocessedViolations = await this.getUnprocessedViolations(student_id);
@@ -404,7 +409,7 @@ export class ViolationService {
   async signSpLetter(
     sp_letter_id: string,
     signed_by_parent: string,
-  ): Promise<SpLetter> {
+  ): Promise<SpLetter | null> {
     try {
       await this.spLetterRepo.update(
         { id: sp_letter_id },
@@ -502,7 +507,7 @@ export class ViolationService {
   /**
    * Review excuse and decide (BK staff action)
    */
-  async reviewExcuse(dto: ReviewExcuseDto): Promise<ViolationExcuse> {
+  async reviewExcuse(dto: ReviewExcuseDto): Promise<ViolationExcuse | null> {
     try {
       const excuse = await this.excuseRepo.findOne({
         where: { id: dto.excuse_id },

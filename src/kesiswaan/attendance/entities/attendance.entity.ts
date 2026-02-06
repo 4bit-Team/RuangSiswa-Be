@@ -5,7 +5,7 @@ import { Entity, PrimaryGeneratedColumn, Column, Index, CreateDateColumn, Update
 @Index(['student_id', 'tanggal'])
 @Index(['class_id', 'tanggal'])
 export class AttendanceRecord {
-  @PrimaryGeneratedColumn('bigint')
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
   @Column({ type: 'bigint' })
@@ -43,7 +43,7 @@ export class AttendanceRecord {
 @Index(['student_id', 'tahun_bulan'], { unique: true })
 @Index(['student_id', 'tahun_bulan'])
 export class AttendanceSummary {
-  @PrimaryGeneratedColumn('bigint')
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
   @Column({ type: 'bigint' })
@@ -90,7 +90,7 @@ export class AttendanceSummary {
 @Index(['student_id', 'alert_type'])
 @Index(['is_resolved'])
 export class AttendanceAlert {
-  @PrimaryGeneratedColumn('bigint')
+  @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
 
   @Column({ type: 'bigint' })
