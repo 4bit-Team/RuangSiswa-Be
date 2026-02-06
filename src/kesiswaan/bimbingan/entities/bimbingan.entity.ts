@@ -175,6 +175,10 @@ export class GuidanceCase {
 @Index(['guidance_case_id'])
 @Index(['student_id', 'session_date'])
 @Index(['status'])
+@Entity('guidance_sessions')
+@Index(['guidance_case_id'])
+@Index(['student_id', 'session_date'])
+@Index(['status'])
 export class GuidanceSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -182,8 +186,14 @@ export class GuidanceSession {
   @Column({ type: 'uuid' })
   guidance_case_id: string;
 
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  referral_id: string; // Link to referral if this is a referral follow-up
+
   @Column({ type: 'int' })
   student_id: number;
+
+  @Column({ type: 'int', nullable: true })
+  sesi_ke: number; // Session number
 
   @Column({ type: 'uuid' })
   bk_staff_id: string; // BK counselor user_id
@@ -194,6 +204,9 @@ export class GuidanceSession {
   // Session scheduling
   @Column({ type: 'datetime' })
   session_date: string; // YYYY-MM-DD HH:mm
+
+  @Column({ type: 'datetime', nullable: true })
+  tanggal_sesi: Date; // Alternate date column
 
   @Column({ type: 'int', default: 30 })
   duration_minutes: number; // Session length
@@ -229,6 +242,9 @@ export class GuidanceSession {
   @Column({ type: 'boolean', default: false })
   student_attended: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  siswa_hadir: boolean; // Alternate attended column
+
   @Column({ type: 'varchar', length: 50, nullable: true })
   outcome: string; // "positive", "neutral", "negative", "breakthrough"
 
@@ -241,6 +257,9 @@ export class GuidanceSession {
 
   @Column({ type: 'date', nullable: true })
   next_session_date: string; // When is next session scheduled
+
+  @Column({ type: 'date', nullable: true })
+  follow_up_date: Date; // Alternate follow-up date column
 
   @CreateDateColumn()
   created_at: Date;
@@ -362,6 +381,9 @@ export class GuidanceIntervention {
   @Column({ type: 'text', nullable: true })
   outcomes: string; // Results of intervention
 
+  @Column({ type: 'text', nullable: true })
+  hasil_intervensi: string; // Alternative outcomes field
+
   @CreateDateColumn()
   created_at: Date;
 
@@ -439,6 +461,9 @@ export class GuidanceProgress {
   @Column({ type: 'uuid' })
   guidance_case_id: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  referral_id: string; // Link to referral if applicable
+
   @Column({ type: 'int' })
   student_id: number;
 
@@ -506,9 +531,9 @@ export class GuidanceProgress {
  * When student needs specialized help (psychologist, medical, etc.)
  */
 @Entity('guidance_referrals')
-@Index(['guidance_case_id'])
-@Index(['student_id'])
+@Index(['student_id', 'tahun'])
 @Index(['referral_status'])
+@Index(['risk_level'])
 export class GuidanceReferral {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -519,11 +544,23 @@ export class GuidanceReferral {
   @Column({ type: 'int' })
   student_id: number;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  student_name: string;
+
+  @Column({ type: 'int', nullable: true })
+  class_id: number;
+
+  @Column({ type: 'int' })
+  tahun: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
   referral_type: string; // e.g., "Psychologist", "Medical", "Social Services"
 
   @Column({ type: 'text' })
   referral_reason: string; // Why is referral needed
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  risk_level: string; // red, orange, yellow
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   external_agency: string; // Name of external agency
@@ -535,7 +572,7 @@ export class GuidanceReferral {
   contact_number: string;
 
   @Column({ type: 'date' })
-  referral_date: string;
+  referral_date: Date;
 
   @Column({
     type: 'enum',
@@ -543,6 +580,18 @@ export class GuidanceReferral {
     default: 'pending',
   })
   referral_status: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  status: string; // pending, in_progress, completed
+
+  @Column({ type: 'date', nullable: true })
+  completed_date: Date;
+
+  @Column({ type: 'text', nullable: true })
+  notes: string;
+
+  @Column({ type: 'text', nullable: true })
+  referral_source: string;
 
   @Column({ type: 'date', nullable: true })
   first_appointment_date: string;
@@ -553,8 +602,14 @@ export class GuidanceReferral {
   @Column({ type: 'text', nullable: true })
   recommendations_from_external: string; // Recommendations from specialist
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   referred_by: string; // BK staff user_id
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  counselor_name: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  counselor_id: string;
 
   @CreateDateColumn()
   created_at: Date;
@@ -689,23 +744,56 @@ export class GuidanceTarget {
  * Guidance Case Status History
  */
 @Entity('guidance_statuses')
-@Index(['guidance_case_id'])
+@Index(['student_id', 'tahun'])
 @Index(['status_type'])
 export class GuidanceStatus {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   guidance_case_id: string;
+
+  @Column({ type: 'int', nullable: true })
+  student_id: number;
+
+  @Column({ type: 'int', nullable: true })
+  tahun: number;
 
   @Column({ type: 'varchar', length: 50 })
   status_type: string; // open, in_progress, resolved, closed
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  status: string; // pending, in_progress, completed, referred
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
   previous_status: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  current_risk_level: string; // red, orange, yellow, green
 
   @Column({ type: 'text', nullable: true })
   status_notes: string;
+
+  @Column({ type: 'int', default: 0 })
+  total_referrals: number;
+
+  @Column({ type: 'int', default: 0 })
+  total_sessions: number;
+
+  @Column({ type: 'int', default: 0 })
+  total_interventions: number;
+
+  @Column({ type: 'date', nullable: true })
+  first_referral_date: Date;
+
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  latest_referral_id: string;
+
+  @Column({ type: 'date', nullable: true })
+  last_session_date: Date;
+
+  @Column({ type: 'date', nullable: true })
+  next_session_date: Date;
 
   @CreateDateColumn()
   created_at: Date;
@@ -714,14 +802,14 @@ export class GuidanceStatus {
   updated_at: Date;
 }
 
-// Export aliases for backward compatibility
-export type BimbinganCategory = GuidanceCategory;
-export type BimbinganReferral = GuidanceReferral;
-export type BimbinganSesi = GuidanceSession;
-export type BimbinganCatat = GuidanceNote;
-export type BimbinganIntervensi = GuidanceIntervention;
-export type BimbinganPerkembangan = GuidanceProgress;
-export type BimbinganAbility = GuidanceAbility;
-export type BimbinganTarget = GuidanceTarget;
-export type BimbinganStatus = GuidanceStatus;
-export type BimbinganStatistik = GuidanceStatistics;
+// Export aliases for backward compatibility (as values, not just types)
+export const BimbinganCategory = GuidanceCategory;
+export const BimbinganReferral = GuidanceReferral;
+export const BimbinganSesi = GuidanceSession;
+export const BimbinganCatat = GuidanceNote;
+export const BimbinganIntervensi = GuidanceIntervention;
+export const BimbinganPerkembangan = GuidanceProgress;
+export const BimbinganAbility = GuidanceAbility;
+export const BimbinganTarget = GuidanceTarget;
+export const BimbinganStatus = GuidanceStatus;
+export const BimbinganStatistik = GuidanceStatistics;

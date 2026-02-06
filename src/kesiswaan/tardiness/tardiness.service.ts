@@ -207,7 +207,7 @@ export class TardinessService {
     months: number = 6,
   ): Promise<TardinessSummary[]> {
     try {
-      const summaries: TardinessSummary[] = [];
+      const summaries: (TardinessSummary | Partial<TardinessSummary>)[] = [];
 
       for (let i = months - 1; i >= 0; i--) {
         const date = new Date();

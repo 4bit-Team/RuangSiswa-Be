@@ -317,9 +317,17 @@ export class AttendanceService {
     return date.toISOString().split('T')[0];
   }
 
-  private async getAllStudents() {
+  private async getAllStudents(): Promise<any[]> {
     // TODO: Implement this based on your database setup
-    return [];
+    // For now, return empty array to avoid errors
+    try {
+      // Example implementation (uncomment when Student repository is available):
+      // return await this.studentRepository.find();
+      return [];
+    } catch (error) {
+      this.logger.error(`Failed to get all students: ${error.message}`);
+      return [];
+    }
   }
 
   private generatePdfReport(summary: any, records: any[]): Buffer {
