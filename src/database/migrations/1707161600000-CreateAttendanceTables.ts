@@ -113,27 +113,27 @@ export class CreateAttendanceTables1707161600000 implements MigrationInterface {
           },
           {
             name: 'total_hadir',
-            type: 'tinyint',
+            type: 'int',
             default: 0,
           },
           {
             name: 'total_sakit',
-            type: 'tinyint',
+            type: 'int',
             default: 0,
           },
           {
             name: 'total_izin',
-            type: 'tinyint',
+            type: 'int',
             default: 0,
           },
           {
             name: 'total_alpa',
-            type: 'tinyint',
+            type: 'int',
             default: 0,
           },
           {
             name: 'total_days_expected',
-            type: 'tinyint',
+            type: 'int',
             isNullable: false,
           },
           {
