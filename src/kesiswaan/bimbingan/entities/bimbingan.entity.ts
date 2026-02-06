@@ -175,10 +175,6 @@ export class GuidanceCase {
 @Index(['guidance_case_id'])
 @Index(['student_id', 'session_date'])
 @Index(['status'])
-@Entity('guidance_sessions')
-@Index(['guidance_case_id'])
-@Index(['student_id', 'session_date'])
-@Index(['status'])
 export class GuidanceSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;

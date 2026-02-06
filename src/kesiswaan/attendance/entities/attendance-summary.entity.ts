@@ -2,7 +2,6 @@ import { Entity, PrimaryGeneratedColumn, Column, Index, CreateDateColumn, Update
 
 @Entity('attendance_summaries')
 @Index(['student_id', 'tahun_bulan'], { unique: true })
-@Index(['student_id', 'tahun_bulan'])
 export class AttendanceSummary {
   @PrimaryGeneratedColumn({ type: 'bigint' })
   id: number;
