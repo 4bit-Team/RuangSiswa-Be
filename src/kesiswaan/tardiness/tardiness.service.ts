@@ -40,7 +40,7 @@ interface ReviewAppealDto {
   resolved_by: string;
 }
 
-interface SyncResult {
+export interface SyncResult {
   submitted: number;
   verified: number;
   failed: number;
@@ -205,7 +205,7 @@ export class TardinessService {
   async getTardinessHistory(
     student_id: number,
     months: number = 6,
-  ): Promise<TardinessSummary[]> {
+  ): Promise<(TardinessSummary | Partial<TardinessSummary>)[]> {
     try {
       const summaries: (TardinessSummary | Partial<TardinessSummary>)[] = [];
 

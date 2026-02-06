@@ -802,14 +802,14 @@ export class GuidanceStatus {
   updated_at: Date;
 }
 
-// Export aliases for backward compatibility (as values, not just types)
-export const BimbinganCategory = GuidanceCategory;
-export const BimbinganReferral = GuidanceReferral;
-export const BimbinganSesi = GuidanceSession;
-export const BimbinganCatat = GuidanceNote;
-export const BimbinganIntervensi = GuidanceIntervention;
-export const BimbinganPerkembangan = GuidanceProgress;
-export const BimbinganAbility = GuidanceAbility;
-export const BimbinganTarget = GuidanceTarget;
-export const BimbinganStatus = GuidanceStatus;
-export const BimbinganStatistik = GuidanceStatistics;
+// Export aliases for backward compatibility (both value and type)
+export { GuidanceCategory as BimbinganCategory };
+export { GuidanceReferral as BimbinganReferral };
+export { GuidanceSession as BimbinganSesi };
+export { GuidanceNote as BimbinganCatat };
+export { GuidanceIntervention as BimbinganIntervensi };
+export { GuidanceProgress as BimbinganPerkembangan };
+export { GuidanceAbility as BimbinganAbility };
+export { GuidanceTarget as BimbinganTarget };
+export { GuidanceStatus as BimbinganStatus };
+export { GuidanceStatistics as BimbinganStatistik };
