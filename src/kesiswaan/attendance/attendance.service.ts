@@ -181,7 +181,7 @@ export class AttendanceService {
   /**
    * Calculate monthly attendance summary
    */
-  async getAttendanceSummary(studentId: number, month: string) {
+  async getAttendanceSummary(studentId: number, month: string): Promise<AttendanceSummary> {
     // Format: "2025-01"
     const [year, monthNum] = month.split('-').map(Number);
 
@@ -219,6 +219,7 @@ export class AttendanceService {
 
     const newSummary = this.attendanceSummaryRepo.create({
       student_id: studentId,
+      class_id: 0, // TODO: Get from student profile
       tahun_bulan: month,
       total_hadir: hadir,
       total_sakit: sakit,
@@ -231,7 +232,7 @@ export class AttendanceService {
         ? alpa > 5
           ? `Alpa > 5 hari (${alpa} hari)`
           : `Attendance < 75% (${percentage}%)`
-        : null,
+        : undefined,
     });
 
     return await this.attendanceSummaryRepo.save(newSummary);
