@@ -1,39 +1,47 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
 } from 'typeorm';
 
 /**
- * ===== BIMBINGAN/GUIDANCE MODULE ENTITIES =====
- * Comprehensive guidance and counseling system
- * Integrates with Attendance (Fitur 1), Tardiness (Fitur 2), Violations (Fitur 3)
+ * ===== BIMBINGAN/GUIDANCE SYSTEM ENTITIES =====
+ * 
+ * Tracks student guidance cases, counseling sessions, interventions, and progress
+ * Auto-integrates with Attendance (Fitur 1), Tardiness (Fitur 2), and Violations (Fitur 3)
  */
 
 /**
- * GuidanceIntervention Type - Master Data
- * Defines types of guidance interventions available
+ * GuidanceCategory - Master data for guidance case types
+ * Examples: Attendance issues, Academic problems, Behavioral issues, Social problems, etc.
  */
-@Entity('guidance_intervention_types')
-@Index(['code'])
-export class GuidanceInterventionType {
+@Entity('guidance_categories')
+@Index(['code'], { unique: true })
+@Index(['is_active'])
+export class GuidanceCategory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 50, nullable: false })
-  code: string; // INDIVIDUAL, GROUP, PARENT_MEETING, CLASS_MEETING, etc
+  @Column({ type: 'varchar', length: 50 })
+  name: string; // e.g., "Keterlambatan", "Akademik", "Perilaku", "Sosial Pribadi"
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  name: string; // Bimbingan Individual, Bimbingan Kelompok, etc
+  @Column({ type: 'varchar', length: 20, unique: true })
+  code: string; // e.g., "ATTENDANCE", "ACADEMIC", "BEHAVIOR", "SOCIAL"
 
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column({ type: 'int', default: 60 })
-  estimated_duration_minutes: number; // Default session duration
+  @Column({ type: 'int', default: 1 })
+  priority_level: number; // 1-5, where 5 is highest priority
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  recommended_duration_weeks: string; // e.g., "4-6 weeks"
 
   @Column({ type: 'boolean', default: true })
   is_active: boolean;
@@ -46,26 +54,111 @@ export class GuidanceInterventionType {
 }
 
 /**
- * GuidanceTopic/Category - Master Data
- * Common guidance topics/issues
+ * GuidanceCase - Individual guidance case for a student
+ * Created automatically from: excessive absences (Fitur 1), tardiness (Fitur 2), or violations (Fitur 3)
  */
-@Entity('guidance_topics')
-@Index(['code'])
-export class GuidanceTopic {
+@Entity('guidance_cases')
+@Index(['student_id', 'tahun'])
+@Index(['status'])
+@Index(['risk_level'])
+@Index(['created_at'])
+export class GuidanceCase {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  code: string; // ATTENDANCE, TARDINESS, VIOLATIONS, ACADEMIC, PERSONAL, FAMILY, etc
+  @Column({ type: 'int' })
+  student_id: number;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  name: string; // Indonesian: Kehadiran, Keterlambatan, Pelanggaran, etc
+  @Column({ type: 'varchar', length: 100 })
+  student_name: string;
+
+  @Column({ type: 'int' })
+  class_id: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  class_name: string;
+
+  @Column({ type: 'uuid' })
+  guidance_category_id: string;
+
+  @Column({ type: 'varchar', length: 50 })
+  category_code: string; // Cached for quick filtering
+
+  // Referral sources (can have multiple)
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  referred_from: string; // "attendance", "tardiness", "violation", "teacher", "parent"
+
+  @Column({ type: 'uuid', nullable: true })
+  referred_from_id: string; // Source ID (tardiness_id, violation_id, etc.)
+
+  // Case details
+  @Column({ type: 'text' })
+  case_description: string; // Summary of the problem
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  background_info: string; // Student background, family situation, etc.
 
-  @Column({ type: 'boolean', default: true })
-  is_active: boolean;
+  @Column({ type: 'date' })
+  case_opened_date: string; // YYYY-MM-DD
+
+  @Column({ type: 'date', nullable: true })
+  case_closed_date: string; // YYYY-MM-DD
+
+  // Case status
+  @Column({
+    type: 'enum',
+    enum: ['open', 'in_progress', 'suspended', 'closed', 'referred'],
+    default: 'open',
+  })
+  status: string;
+
+  // Risk assessment
+  @Column({
+    type: 'enum',
+    enum: ['low', 'medium', 'high', 'critical'],
+    default: 'medium',
+  })
+  risk_level: string; // Automatically calculated from combined Fitur 1-3 scores
+
+  // Combined risk score (0-100)
+  @Column({ type: 'int', default: 0 })
+  risk_score: number;
+
+  // Risk calculation components
+  @Column({ type: 'int', default: 0 })
+  attendance_risk_score: number; // From Fitur 1 (0-33)
+
+  @Column({ type: 'int', default: 0 })
+  tardiness_risk_score: number; // From Fitur 2 (0-33)
+
+  @Column({ type: 'int', default: 0 })
+  violation_risk_score: number; // From Fitur 3 (0-34)
+
+  // Recommended actions
+  @Column({ type: 'text', nullable: true })
+  recommended_interventions: string; // JSON list of recommended interventions
+
+  @Column({ type: 'int', default: 0 })
+  total_sessions_planned: number;
+
+  @Column({ type: 'int', default: 0 })
+  total_sessions_completed: number;
+
+  // Year tracking
+  @Column({ type: 'int' })
+  tahun: number;
+
+  @Column({ type: 'uuid', nullable: true })
+  assigned_to_bk: string; // BK staff user_id
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  assigned_to_bk_name: string;
+
+  @Column({ type: 'boolean', default: false })
+  is_escalated: boolean; // Escalated to higher authority
+
+  @Column({ type: 'text', nullable: true })
+  escalation_reason: string;
 
   @CreateDateColumn()
   created_at: Date;
@@ -75,310 +168,664 @@ export class GuidanceTopic {
 }
 
 /**
- * GuidanceSession - Individual Guidance Record
- * Records each counseling/guidance session with student
+ * GuidanceSession - Individual counseling/guidance session
+ * Scheduled meetings between BK staff and student
  */
 @Entity('guidance_sessions')
-@Index(['student_id', 'created_at'])
+@Index(['guidance_case_id'])
+@Index(['student_id', 'session_date'])
 @Index(['status'])
-@Index(['scheduled_date'])
-@Index(['bk_staff_id'])
 export class GuidanceSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // Reference to student
-  @Column({ type: 'int', nullable: false })
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'varchar', length: 36, nullable: true })
+  referral_id: string; // Link to referral if this is a referral follow-up
+
+  @Column({ type: 'int' })
   student_id: number;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  student_name: string;
+  @Column({ type: 'int', nullable: true })
+  sesi_ke: number; // Session number
 
-  @Column({ type: 'int', nullable: false })
-  class_id: number;
+  @Column({ type: 'uuid' })
+  bk_staff_id: string; // BK counselor user_id
 
-  // Session details
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  intervention_type_id: string; // FK to GuidanceInterventionType
-
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  topic_id: string; // FK to GuidanceTopic
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  topic_code: string; // ATTENDANCE, TARDINESS, VIOLATIONS, ACADEMIC, etc
-
-  // BK Staff (Counselor)
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  bk_staff_id: string; // User ID of counselor
-
-  @Column({ type: 'varchar', length: 100, nullable: false })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   bk_staff_name: string;
 
-  // Auto-referral info
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  referral_source_id: string; // Which module triggered this (violation_id, tardiness_id, etc)
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  referral_source_type: string; // violation, tardiness, attendance, manual
-
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  referral_source_data: string; // JSON: original issue details
-
-  // Scheduling
-  @Column({ type: 'timestamp', nullable: false })
-  scheduled_date: Date;
-
-  @Column({ type: 'time', nullable: true })
-  scheduled_time: string; // HH:MM
+  // Session scheduling
+  @Column({ type: 'timestamp' })
+  session_date: string; // YYYY-MM-DD HH:mm
 
   @Column({ type: 'timestamp', nullable: true })
-  actual_date: Date; // When session actually happened
+  tanggal_sesi: Date; // Alternate date column
 
-  @Column({ type: 'int', nullable: true })
-  duration_minutes: number;
+  @Column({ type: 'int', default: 30 })
+  duration_minutes: number; // Session length
 
-  // Session status
-  @Column({ type: 'varchar', length: 30, default: 'scheduled' })
-  status: string; // scheduled, in-progress, completed, postponed, cancelled, no-show
+  @Column({
+    type: 'enum',
+    enum: ['scheduled', 'in_progress', 'completed', 'cancelled'],
+    default: 'scheduled',
+  })
+  status: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  session_type: string; // "individual", "group", "parent_meeting", "follow_up"
+
+  // Session location
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  location: string; // e.g., "BK Office", "Campus", "Virtual"
+
+  // Session content
+  @Column({ type: 'text', nullable: true })
+  agenda: string; // What will be discussed
+
+  @Column({ type: 'text', nullable: true })
+  notes: string; // What was discussed during session
+
+  @Column({ type: 'text', nullable: true })
+  student_response: string; // How student reacted/responded
+
+  @Column({ type: 'text', nullable: true })
+  recommendations: string; // Recommendations from this session
+
+  // Session outcome
   @Column({ type: 'boolean', default: false })
   student_attended: boolean;
 
   @Column({ type: 'boolean', default: false })
-  parent_attended: boolean;
+  siswa_hadir: boolean; // Alternate attended column
 
-  // Session notes and outcomes
-  @Column({ type: 'text', nullable: true })
-  session_notes: string; // Detailed notes from counselor
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  outcome: string; // "positive", "neutral", "negative", "breakthrough"
 
-  @Column({ type: 'text', nullable: true })
-  student_response: string; // How student responded
-
-  @Column({ type: 'text', nullable: true })
-  intervention_plan: string; // Action plan agreed upon
-
-  @Column({ type: 'text', nullable: true })
-  follow_up_plan: string; // What happens next
-
-  // Outcomes
-  @Column({ type: 'varchar', length: 30, nullable: true })
-  outcome: string; // improved, stable, worsening, resolved, referred
-
-  @Column({ type: 'int', default: 0 })
-  progress_score: number; // 0-100 scale
-
-  // References for tracking
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  sp_letter_id: string; // If linked to SP letter
-
-  @Column({ type: 'simple-array', nullable: true })
-  related_session_ids: string[]; // Other related sessions
+  @Column({ type: 'int', nullable: true })
+  effectiveness_rating: number; // 1-5 scale
 
   // Follow-up
-  @Column({ type: 'timestamp', nullable: true })
-  next_session_date: Date;
+  @Column({ type: 'text', nullable: true })
+  followup_actions: string; // Actions to take after session
 
-  @Column({ type: 'boolean', default: false })
-  requires_parent_involvement: boolean;
+  @Column({ type: 'date', nullable: true })
+  next_session_date: string; // When is next session scheduled
 
-  @Column({ type: 'boolean', default: false })
-  requires_teacher_coordination: boolean;
+  @Column({ type: 'date', nullable: true })
+  follow_up_date: Date; // Alternate follow-up date column
+
+  @Column({ type: 'boolean', nullable: true })
+  orang_tua_hadir: boolean; // Parent attended
+
+  @Column({ type: 'text', nullable: true })
+  hasil_akhir: string; // Final result/outcome of session
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  follow_up_status: string; // Status of follow-up
 
   @CreateDateColumn()
   created_at: Date;
 
   @UpdateDateColumn()
   updated_at: Date;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  created_by: string;
 }
 
 /**
- * CaseNote - Detailed Notes for Guidance Sessions
- * Structured documentation of counseling interactions
+ * GuidanceNote - Case notes and progress tracking
+ * Detailed documentation of observations and progress
  */
-@Entity('case_notes')
-@Index(['guidance_session_id'])
-@Index(['student_id', 'created_at'])
-export class CaseNote {
+@Entity('guidance_notes')
+@Index(['guidance_case_id'])
+@Index(['created_by'])
+@Index(['created_at'])
+export class GuidanceNote {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 36, nullable: false })
-  guidance_session_id: string; // FK to GuidanceSession
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
 
-  @Column({ type: 'int', nullable: false })
+  @Column({ type: 'int' })
   student_id: number;
 
-  // Assessment
-  @Column({ type: 'text', nullable: true })
-  student_condition: string; // Kondisi siswa saat ini
+  @Column({ type: 'text' })
+  note_content: string;
 
-  @Column({ type: 'text', nullable: true })
-  problem_statement: string; // Analisis masalah
+  @Column({
+    type: 'enum',
+    enum: ['observation', 'progress_update', 'parent_communication', 'incident', 'breakthrough'],
+    default: 'observation',
+  })
+  note_type: string;
 
-  @Column({ type: 'text', nullable: true })
-  root_cause_analysis: string; // Analisis akar masalah
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  sentiment: string; // "positive", "neutral", "negative"
 
-  // Intervention details
-  @Column({ type: 'text', nullable: true })
-  intervention_given: string; // Apa yang diberikan
-
-  @Column({ type: 'text', nullable: true })
-  student_understanding: string; // Pemahaman siswa terhadap usulan
-
-  // Observation and assessment
-  @Column({ type: 'text', nullable: true })
-  behavioral_observations: string; // Observasi perilaku
-
-  @Column({ type: 'text', nullable: true })
-  emotional_state: string; // Kondisi emosi (cooperative, defensive, sad, angry, etc)
-
-  @Column({ type: 'text', nullable: true })
-  motivation_level: string; // Tingkat motivasi (high, medium, low)
-
-  // Goals and agreements
-  @Column({ type: 'text', nullable: true })
-  goals_agreed: string; // Target yang disepakati
-
-  @Column({ type: 'text', nullable: true })
-  student_commitment: string; // Komitmen siswa dalam mengikuti usulan
-
-  // Recommendations
-  @Column({ type: 'text', nullable: true })
-  recommendations: string; // Saran untuk siswa
-
-  @Column({ type: 'text', nullable: true })
-  parent_recommendations: string; // Saran untuk orang tua
-
-  @Column({ type: 'text', nullable: true })
-  teacher_recommendations: string; // Saran untuk guru
-
-  // Referrals
-  @Column({ type: 'boolean', default: false })
-  referred_to_specialist: boolean;
+  // Who created the note
+  @Column({ type: 'uuid' })
+  created_by: string; // User ID
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  specialist_type: string; // Psikolog, Dokter, dll
+  created_by_name: string;
 
-  @Column({ type: 'text', nullable: true })
-  referral_reason: string;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  created_by_role: string; // "BK", "Teacher", "Parent"
 
-  // Follow-up
-  @Column({ type: 'timestamp', nullable: true })
-  follow_up_date: Date;
+  // Attachments
+  @Column({ type: 'json', nullable: true })
+  attachments: string[]; // File paths of attached documents
 
-  @Column({ type: 'text', nullable: true })
-  follow_up_action: string;
-
-  @Column({ type: 'boolean', default: false })
-  is_confidential: boolean;
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  status: string;
 
   @CreateDateColumn()
   created_at: Date;
 
   @UpdateDateColumn()
   updated_at: Date;
-
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  created_by: string; // BK staff who wrote note
 }
 
 /**
- * GuidanceStatus - Current Guidance Status per Student
- * Tracks overall guidance status and progress
+ * GuidanceIntervention - Specific interventions assigned to student
+ * Examples: Career counseling, Academic tutoring, Anger management, etc.
+ */
+@Entity('guidance_interventions')
+@Index(['guidance_case_id'])
+@Index(['student_id'])
+@Index(['status'])
+export class GuidanceIntervention {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'int' })
+  student_id: number;
+
+  @Column({ type: 'varchar', length: 100 })
+  intervention_name: string; // e.g., "Career Counseling", "Academic Support"
+
+  @Column({ type: 'text' })
+  intervention_description: string;
+
+  @Column({
+    type: 'enum',
+    enum: ['counseling', 'tutoring', 'skills_training', 'parent_involvement', 'referral_external', 'monitoring'],
+    default: 'counseling',
+  })
+  intervention_type: string;
+
+  @Column({ type: 'date' })
+  start_date: string; // YYYY-MM-DD
+
+  @Column({ type: 'date', nullable: true })
+  end_date: string;
+
+  @Column({
+    type: 'enum',
+    enum: ['planned', 'in_progress', 'completed', 'discontinued'],
+    default: 'planned',
+  })
+  status: string;
+
+  // Responsible party
+  @Column({ type: 'uuid', nullable: true })
+  responsible_party_id: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  responsible_party_name: string;
+
+  // Progress tracking
+  @Column({ type: 'text', nullable: true })
+  progress_notes: string;
+
+  @Column({ type: 'int', nullable: true })
+  completion_percentage: number; // 0-100%
+
+  @Column({ type: 'text', nullable: true })
+  outcomes: string; // Results of intervention
+
+  @Column({ type: 'text', nullable: true })
+  hasil_intervensi: string; // Alternative outcomes field
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  tanggal_evaluasi: string;
+
+  @Column({ type: 'int', nullable: true })
+  efektivitas: number;
+
+  @Column({ type: 'boolean', nullable: true })
+  orang_tua_hadir: boolean;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * GuidanceParentCommunication - Track parent/guardian communications
+ * Important for parental involvement in guidance process
+ */
+@Entity('guidance_parent_communications')
+@Index(['guidance_case_id'])
+@Index(['student_id'])
+@Index(['communication_date'])
+export class GuidanceParentCommunication {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'int' })
+  student_id: number;
+
+  @Column({ type: 'varchar', length: 100 })
+  parent_name: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  parent_contact: string;
+
+  @Column({ type: 'timestamp' })
+  communication_date: string;
+
+  @Column({
+    type: 'enum',
+    enum: ['call', 'sms', 'email', 'meeting', 'letter'],
+    default: 'call',
+  })
+  communication_type: string;
+
+  @Column({ type: 'text' })
+  communication_content: string; // What was discussed
+
+  @Column({ type: 'text', nullable: true })
+  parent_response: string; // Parent's response/feedback
+
+  @Column({ type: 'boolean', default: false })
+  parent_agreed_to_involve: boolean; // Does parent agree to participate in guidance
+
+  @Column({ type: 'uuid' })
+  communicated_by: string; // BK staff who made communication
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  communicated_by_name: string;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * GuidanceProgress - Overall progress tracking for guidance case
+ * Measures improvement in student behavior, attendance, grades
+ */
+@Entity('guidance_progress')
+@Index(['guidance_case_id'])
+@Index(['student_id', 'assessment_date'])
+export class GuidanceProgress {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  referral_id: string; // Link to referral if applicable
+
+  @Column({ type: 'int' })
+  student_id: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  student_name: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  counselor_id: string;
+
+  @Column({ type: 'date' })
+  assessment_date: string; // YYYY-MM-DD (when progress was assessed)
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  tanggal_evaluasi: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  status_keseluruhan: string;
+
+  // Pre/Post intervention comparison
+  @Column({ type: 'int', nullable: true })
+  previous_attendance_percentage: number; // e.g., 70%
+
+  @Column({ type: 'int', nullable: true })
+  current_attendance_percentage: number;
+
+  @Column({ type: 'int', nullable: true })
+  previous_tardiness_count: number;
+
+  @Column({ type: 'int', nullable: true })
+  current_tardiness_count: number;
+
+  @Column({ type: 'int', nullable: true })
+  previous_violation_count: number;
+
+  @Column({ type: 'int', nullable: true })
+  current_violation_count: number;
+
+  @Column({ type: 'decimal', precision: 3, scale: 2, nullable: true })
+  previous_gpa: number;
+
+  @Column({ type: 'decimal', precision: 3, scale: 2, nullable: true })
+  current_gpa: number;
+
+  // Behavioral/attitude changes
+  @Column({ type: 'text', nullable: true })
+  behavioral_observations: string; // e.g., "More engaged in class", "Better attitude"
+
+  @Column({ type: 'int', nullable: true })
+  overall_improvement_score: number; // 1-10 scale
+
+  @Column({
+    type: 'enum',
+    enum: ['excellent', 'good', 'fair', 'poor', 'no_change'],
+    default: 'fair',
+  })
+  progress_assessment: string;
+
+  @Column({ type: 'text', nullable: true })
+  assessment_comments: string;
+
+  // Assessment by
+  @Column({ type: 'uuid' })
+  assessed_by: string; // BK staff user_id
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  assessed_by_name: string;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * GuidanceReferral - Referrals to external services
+ * When student needs specialized help (psychologist, medical, etc.)
+ */
+@Entity('guidance_referrals')
+@Index(['student_id', 'tahun'])
+@Index(['referral_status'])
+@Index(['risk_level'])
+export class GuidanceReferral {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'int' })
+  student_id: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  student_name: string;
+
+  @Column({ type: 'int', nullable: true })
+  class_id: number;
+
+  @Column({ type: 'int' })
+  tahun: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  referral_type: string; // e.g., "Psychologist", "Medical", "Social Services"
+
+  @Column({ type: 'text' })
+  referral_reason: string; // Why is referral needed
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  risk_level: string; // red, orange, yellow
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  external_agency: string; // Name of external agency
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  contact_person: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  contact_number: string;
+
+  @Column({ type: 'date' })
+  referral_date: Date;
+
+  @Column({
+    type: 'enum',
+    enum: ['pending', 'accepted', 'in_progress', 'completed', 'declined'],
+    default: 'pending',
+  })
+  referral_status: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  status: string; // pending, in_progress, completed
+
+  @Column({ type: 'date', nullable: true })
+  completed_date: Date;
+
+  @Column({ type: 'text', nullable: true })
+  notes: string;
+
+  @Column({ type: 'json', nullable: true })
+  referral_source: { source: string; source_id: string; details: string } | null;
+
+  @Column({ type: 'date', nullable: true })
+  first_appointment_date: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  counselor_id: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  counselor_name: string;
+
+  @Column({ type: 'date', nullable: true })
+  assigned_date: string;
+
+  @Column({ type: 'text', nullable: true })
+  external_assessment_report: string; // Report from external agency
+
+  @Column({ type: 'text', nullable: true })
+  recommendations_from_external: string; // Recommendations from specialist
+
+  @Column({ type: 'uuid', nullable: true })
+  referred_by: string; // BK staff user_id
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * GuidanceStatistics - Aggregate statistics for dashboards
+ * Cached for performance optimization
+ */
+@Entity('guidance_statistics')
+@Index(['tahun'])
+export class GuidanceStatistics {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'int' })
+  tahun: number;
+
+  @Column({ type: 'int', default: 0 })
+  total_cases_open: number;
+
+  @Column({ type: 'int', default: 0 })
+  total_cases_closed: number;
+
+  @Column({ type: 'int', default: 0 })
+  total_cases_referred: number;
+
+  @Column({ type: 'int', default: 0 })
+  total_sessions_completed: number;
+
+  @Column({ type: 'int', default: 0 })
+  critical_risk_count: number; // Students at critical risk
+
+  @Column({ type: 'int', default: 0 })
+  high_risk_count: number;
+
+  @Column({ type: 'int', default: 0 })
+  medium_risk_count: number;
+
+  @Column({ type: 'int', default: 0 })
+  low_risk_count: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  average_case_duration_weeks: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  case_resolution_rate_percentage: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
+  average_improvement_score: number; // 1-10 scale
+
+  // Most common issues
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  most_common_category: string;
+
+  @Column({ type: 'int', default: 0 })
+  parent_involvement_percentage: number;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * Student Guidance Ability/Skill Assessment
+ */
+@Entity('guidance_abilities')
+@Index(['guidance_case_id'])
+@Index(['skill_type'])
+export class GuidanceAbility {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'varchar', length: 100 })
+  skill_type: string; // e.g., "Communication", "Problem Solving", "Self Control"
+
+  @Column({ type: 'int', default: 1 })
+  proficiency_level: number; // 1-5 scale
+
+  @Column({ type: 'text', nullable: true })
+  assessment_notes: string;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * Guidance Goals/Targets
+ */
+@Entity('guidance_targets')
+@Index(['guidance_case_id'])
+@Index(['status'])
+export class GuidanceTarget {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'uuid' })
+  guidance_case_id: string;
+
+  @Column({ type: 'text' })
+  target_description: string;
+
+  @Column({ type: 'varchar', length: 50, default: 'pending' })
+  status: string; // pending, in_progress, completed, failed
+
+  @Column({ type: 'date', nullable: true })
+  target_date: Date;
+
+  @Column({ type: 'int', default: 0 })
+  progress_percentage: number;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @UpdateDateColumn()
+  updated_at: Date;
+}
+
+/**
+ * Guidance Case Status History
  */
 @Entity('guidance_statuses')
 @Index(['student_id', 'tahun'])
-@Index('idx_student_year_unique', ['student_id', 'tahun'], { unique: true })
+@Index(['status_type'])
 export class GuidanceStatus {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'int', nullable: false })
+  @Column({ type: 'uuid', nullable: true })
+  guidance_case_id: string;
+
+  @Column({ type: 'int', nullable: true })
   student_id: number;
 
-  @Column({ type: 'int', nullable: false })
+  @Column({ type: 'int', nullable: true })
   tahun: number;
 
-  // Status tracking
-  @Column({ type: 'varchar', length: 30, default: 'active' })
-  status: string; // active, monitoring, intensive, resolved, referred
+  @Column({ type: 'varchar', length: 50 })
+  status_type: string; // open, in_progress, resolved, closed
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  status: string; // pending, in_progress, completed, referred
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  previous_status: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  current_risk_level: string; // red, orange, yellow, green
+
+  @Column({ type: 'text', nullable: true })
+  status_notes: string;
+
+  @Column({ type: 'int', default: 0 })
+  total_referrals: number;
 
   @Column({ type: 'int', default: 0 })
   total_sessions: number;
 
   @Column({ type: 'int', default: 0 })
-  completed_sessions: number;
+  total_interventions: number;
 
-  @Column({ type: 'int', default: 0 })
-  individual_sessions: number;
+  @Column({ type: 'date', nullable: true })
+  first_referral_date: Date;
 
-  @Column({ type: 'int', default: 0 })
-  group_sessions: number;
-
-  @Column({ type: 'int', default: 0 })
-  parent_session_count: number;
-
-  // Health indicators
-  @Column({ type: 'varchar', length: 30, nullable: true })
-  overall_progress: string; // improving, stable, declining
-
-  @Column({ type: 'int', default: 0 })
-  progress_percentage: number; // 0-100
-
-  // Issue tracking
-  @Column({ type: 'simple-array', nullable: true })
-  current_issues: string[]; // attendance, tardiness, violations, academic, personal, family
-
-  @Column({ type: 'simple-array', nullable: true })
-  resolved_issues: string[];
-
-  // Referral sources
-  @Column({ type: 'int', default: 0 })
-  violations_count: number;
-
-  @Column({ type: 'int', default: 0 })
-  tardiness_count: number;
-
-  @Column({ type: 'int', default: 0 })
-  absence_count: number;
-
-  // Intensity level
-  @Column({ type: 'varchar', length: 30, default: 'regular' })
-  intervention_level: string; // regular (1x per month), frequent (2-3x per month), intensive (weekly), crisis (daily)
-
-  // Key BK staff
   @Column({ type: 'varchar', length: 36, nullable: true })
-  primary_bk_staff_id: string;
+  latest_referral_id: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  primary_bk_staff_name: string;
-
-  // Dates
-  @Column({ type: 'timestamp', nullable: true })
-  first_session_date: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'date', nullable: true })
   last_session_date: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'date', nullable: true })
   next_session_date: Date;
 
-  // Additional tracking
-  @Column({ type: 'text', nullable: true })
-  case_summary: string; // Brief summary of case
-
-  @Column({ type: 'boolean', default: false })
-  parent_involved: boolean;
-
-  @Column({ type: 'boolean', default: false })
-  requires_specialist_follow_up: boolean;
-
-  @Column({ type: 'text', nullable: true })
-  recommendations: string;
-
   @CreateDateColumn()
   created_at: Date;
 
@@ -386,198 +833,14 @@ export class GuidanceStatus {
   updated_at: Date;
 }
 
-/**
- * GuidanceReferral - Auto-referral from Other Modules
- * Tracks automatic referrals from Fitur 1, 2, 3
- */
-@Entity('guidance_referrals')
-@Index(['student_id', 'referral_date'])
-@Index(['status'])
-@Index(['source_module'])
-export class GuidanceReferral {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ type: 'int', nullable: false })
-  student_id: number;
-
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  student_name: string;
-
-  // Referral source
-  @Column({ type: 'varchar', length: 30, nullable: false })
-  source_module: string; // attendance, tardiness, violations, manual
-
-  @Column({ type: 'varchar', length: 36, nullable: false })
-  source_record_id: string; // ID of violation/tardiness/attendance record
-
-  @Column({ type: 'text', nullable: true })
-  source_data: string; // JSON of source record details
-
-  // Referral details
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  reason: string; // Why referral was triggered
-
-  @Column({ type: 'text', nullable: true })
-  description: string;
-
-  // Severity assessment
-  @Column({ type: 'varchar', length: 30, default: 'normal' })
-  priority: string; // normal, urgent, crisis
-
-  @Column({ type: 'int', default: 1 })
-  severity_score: number; // 1-5 scale (5 = most severe)
-
-  // Status
-  @Column({ type: 'varchar', length: 30, default: 'pending' })
-  status: string; // pending, accepted, in_progress, completed, dismissed
-
-  // Assigned to BK staff
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  assigned_to_bk_id: string;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  assigned_to_bk_name: string;
-
-  @Column({ type: 'timestamp', nullable: true })
-  assigned_date: Date;
-
-  // Linked guidance session
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  guidance_session_id: string;
-
-  // Dates
-  @Column({ type: 'timestamp', nullable: false })
-  referral_date: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
-  response_date: Date;
-
-  @Column({ type: 'text', nullable: true })
-  response_notes: string;
-
-  @Column({ type: 'text', nullable: true })
-  action_taken: string;
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
-}
-
-/**
- * GuidanceProgress - Progress Tracking per Issue
- * Tracks improvement/decline for each issue over time
- */
-@Entity('guidance_progress')
-@Index(['student_id', 'tahun', 'issue_topic'])
-export class GuidanceProgress {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ type: 'int', nullable: false })
-  student_id: number;
-
-  @Column({ type: 'int', nullable: false })
-  tahun: number;
-
-  @Column({ type: 'varchar', length: 50, nullable: false })
-  issue_topic: string; // attendance, tardiness, violations, academic, personal, family
-
-  // Progress metrics
-  @Column({ type: 'int', default: 0 })
-  initial_severity: number; // 1-5 when first identified
-
-  @Column({ type: 'int', default: 0 })
-  current_severity: number; // 1-5 current level
-
-  @Column({ type: 'int', default: 0 })
-  target_severity: number; // 1-5 target
-
-  @Column({ type: 'int', default: 0 })
-  sessions_completed: number;
-
-  @Column({ type: 'int', default: 0 })
-  progress_percentage: number; // 0-100
-
-  // Timeline
-  @Column({ type: 'timestamp', nullable: false })
-  start_date: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
-  expected_resolution_date: Date;
-
-  @Column({ type: 'timestamp', nullable: true })
-  actual_resolution_date: Date;
-
-  // Tracking data
-  @Column({ type: 'text', nullable: true })
-  progress_notes: string;
-
-  @Column({ type: 'simple-array', nullable: true })
-  milestone_dates: string[]; // CSV of milestone achievement dates
-
-  @Column({ type: 'varchar', length: 30, nullable: true })
-  status: string; // in-progress, improving, stable, regressing, resolved
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
-}
-
-/**
- * GuidanceIntervention - Individual Intervention Records
- * Documents specific interventions given to student
- */
-@Entity('guidance_interventions')
-@Index(['guidance_session_id'])
-@Index(['student_id'])
-export class GuidanceIntervention {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
-
-  @Column({ type: 'varchar', length: 36, nullable: false })
-  guidance_session_id: string;
-
-  @Column({ type: 'int', nullable: false })
-  student_id: number;
-
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  student_name: string;
-
-  // Intervention type
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  intervention_type: string; // technique name
-
-  @Column({ type: 'text', nullable: true })
-  description: string;
-
-  @Column({ type: 'text', nullable: true })
-  technique_used: string; // What technique/method used
-
-  // Response and effectiveness
-  @Column({ type: 'varchar', length: 30, nullable: true })
-  student_response: string; // positive, neutral, negative
-
-  @Column({ type: 'int', default: 0 })
-  effectiveness_score: number; // 1-5 how effective
-
-  @Column({ type: 'text', nullable: true })
-  notes: string;
-
-  // Follow-up
-  @Column({ type: 'boolean', default: false })
-  requires_follow_up: boolean;
-
-  @Column({ type: 'varchar', length: 36, nullable: true })
-  follow_up_session_id: string;
-
-  @CreateDateColumn()
-  created_at: Date;
-
-  @UpdateDateColumn()
-  updated_at: Date;
-}
+// Export aliases for backward compatibility (both value and type)
+export { GuidanceCategory as BimbinganCategory };
+export { GuidanceReferral as BimbinganReferral };
+export { GuidanceSession as BimbinganSesi };
+export { GuidanceNote as BimbinganCatat };
+export { GuidanceIntervention as BimbinganIntervensi };
+export { GuidanceProgress as BimbinganPerkembangan };
+export { GuidanceAbility as BimbinganAbility };
+export { GuidanceTarget as BimbinganTarget };
+export { GuidanceStatus as BimbinganStatus };
+export { GuidanceStatistics as BimbinganStatistik };
