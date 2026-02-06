@@ -202,10 +202,10 @@ export class GuidanceSession {
   bk_staff_name: string;
 
   // Session scheduling
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   session_date: string; // YYYY-MM-DD HH:mm
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   tanggal_sesi: Date; // Alternate date column
 
   @Column({ type: 'int', default: 30 })
@@ -436,7 +436,7 @@ export class GuidanceParentCommunication {
   @Column({ type: 'varchar', length: 20, nullable: true })
   parent_contact: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   communication_date: string;
 
   @Column({

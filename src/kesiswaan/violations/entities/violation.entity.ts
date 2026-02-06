@@ -277,7 +277,7 @@ export class ViolationExcuse {
   @Column({ type: 'varchar', length: 255, nullable: true })
   resolved_by: string; // BK staff who reviewed
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   resolved_at: Date;
 
   @CreateDateColumn()

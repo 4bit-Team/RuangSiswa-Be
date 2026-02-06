@@ -204,7 +204,7 @@ export class TardinessAlert {
   @Column({ type: 'varchar', length: 255, nullable: true })
   resolved_by: string; // Counselor who handled
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   resolved_at: Date;
 
   @CreateDateColumn()
