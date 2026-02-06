@@ -428,7 +428,7 @@ export class BimbinganService {
         {
           status: 'completed',
           hasil_intervensi,
-          efektivitas,
+          efektivitas: parseInt(efektivitas, 10),
           tanggal_evaluasi: new Date().toISOString().split('T')[0],
         },
       );

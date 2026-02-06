@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { WalasApiClient } from '../../walas/walas-api.client';
-import { AttendanceRecord } from '../entities/attendance-record.entity';
-import { AttendanceSummary } from '../entities/attendance-summary.entity';
-import { AttendanceAlert } from '../entities/attendance-alert.entity';
+import { AttendanceRecord } from './entities/attendance-record.entity';
+import { AttendanceSummary } from './entities/attendance-summary.entity';
+import { AttendanceAlert } from './entities/attendance-alert.entity';
 
 /**
  * AttendanceService

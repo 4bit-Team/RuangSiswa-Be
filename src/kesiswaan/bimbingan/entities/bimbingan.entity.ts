@@ -261,6 +261,15 @@ export class GuidanceSession {
   @Column({ type: 'date', nullable: true })
   follow_up_date: Date; // Alternate follow-up date column
 
+  @Column({ type: 'boolean', nullable: true })
+  orang_tua_hadir: boolean; // Parent attended
+
+  @Column({ type: 'text', nullable: true })
+  hasil_akhir: string; // Final result/outcome of session
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  follow_up_status: string; // Status of follow-up
+
   @CreateDateColumn()
   created_at: Date;
 
@@ -637,12 +646,6 @@ export class GuidanceReferral {
 
   @Column({ type: 'uuid', nullable: true })
   referred_by: string; // BK staff user_id
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  counselor_name: string;
-
-  @Column({ type: 'uuid', nullable: true })
-  counselor_id: string;
 
   @CreateDateColumn()
   created_at: Date;
