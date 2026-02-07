@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
-
+import { WalasModule } from '../../walas/walas.module';
 import { TardinessService } from './tardiness.service';
 import { TardinessController } from './tardiness.controller';
 import {
@@ -24,6 +24,7 @@ import {
     ]),
     HttpModule,
     ConfigModule,
+    WalasModule,
   ],
   providers: [TardinessService],
   controllers: [TardinessController],

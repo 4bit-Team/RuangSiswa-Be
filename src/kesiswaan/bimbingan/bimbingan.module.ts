@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BimbinganService } from './bimbingan.service';
 import { BimbinganController } from './bimbingan.controller';
 import { AutoReferralService } from './auto-referral.service';
+import { WalasModule } from '../../walas/walas.module';
 import {
   BimbinganCategory,
   BimbinganReferral,
@@ -30,6 +31,7 @@ import {
       BimbinganStatus,
       BimbinganStatistik,
     ]),
+    WalasModule,
   ],
   controllers: [BimbinganController],
   providers: [BimbinganService, AutoReferralService],

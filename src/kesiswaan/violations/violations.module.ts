@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ViolationService } from './violations.service';
 import { ViolationsController } from './violations.controller';
 import { SpPdfService } from './sp-pdf.service';
+import { WalasModule } from '../../walas/walas.module';
 import {
   Violation,
   ViolationCategory,
@@ -22,6 +23,7 @@ import {
       ViolationExcuse,
       ViolationStatistics,
     ]),
+    WalasModule,
   ],
   controllers: [ViolationsController],
   providers: [ViolationService, SpPdfService],
