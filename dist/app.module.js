@@ -66,6 +66,11 @@ const statistics_module_1 = require("./statistics/statistics.module");
 const consultation_category_module_1 = require("./consultation-category/consultation-category.module");
 const counseling_category_module_1 = require("./counseling-category/counseling-category.module");
 const news_category_module_1 = require("./news-category/news-category.module");
+const bimbingan_module_1 = require("./kesiswaan/bimbingan/bimbingan.module");
+const attendance_module_1 = require("./kesiswaan/attendance/attendance.module");
+const violations_module_1 = require("./kesiswaan/violations/violations.module");
+const tardiness_module_1 = require("./kesiswaan/tardiness/tardiness.module");
+const walas_module_1 = require("./walas/walas.module");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 let AppModule = class AppModule {
@@ -132,6 +137,11 @@ exports.AppModule = AppModule = __decorate([
             consultation_category_module_1.ConsultationCategoryModule,
             counseling_category_module_1.CounselingCategoryModule,
             news_category_module_1.NewsCategoryModule,
+            bimbingan_module_1.BimbinganModule,
+            attendance_module_1.AttendanceModule,
+            violations_module_1.ViolationsModule,
+            tardiness_module_1.TardinessModule,
+            walas_module_1.WalasModule,
         ],
     })
 ], AppModule);

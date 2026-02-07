@@ -16,7 +16,7 @@ import { AttendanceService } from './attendance.service';
  * Endpoints untuk fitur Kehadiran di RuangSiswa Kesiswaan
  * Base Path: /api/v1/kesiswaan/attendance
  */
-@Controller('api/v1/kesiswaan/attendance')
+@Controller('v1/kesiswaan/attendance')
 export class AttendanceController {
   private readonly logger = new Logger(AttendanceController.name);
 

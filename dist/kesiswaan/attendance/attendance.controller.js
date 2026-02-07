@@ -250,7 +250,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AttendanceController.prototype, "resolveAlert", null);
 exports.AttendanceController = AttendanceController = AttendanceController_1 = __decorate([
-    (0, common_1.Controller)('api/v1/kesiswaan/attendance'),
+    (0, common_1.Controller)('v1/kesiswaan/attendance'),
     __metadata("design:paramtypes", [attendance_service_1.AttendanceService])
 ], AttendanceController);
 //# sourceMappingURL=attendance.controller.js.map

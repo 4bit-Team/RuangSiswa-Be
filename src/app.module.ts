@@ -24,6 +24,11 @@ import { StatisticsModule } from './statistics/statistics.module';
 import { ConsultationCategoryModule } from './consultation-category/consultation-category.module';
 import { CounselingCategoryModule } from './counseling-category/counseling-category.module';
 import { NewsCategoryModule } from './news-category/news-category.module';
+import { BimbinganModule } from './kesiswaan/bimbingan/bimbingan.module';
+import { AttendanceModule } from './kesiswaan/attendance/attendance.module';
+import { ViolationsModule } from './kesiswaan/violations/violations.module';
+import { TardinessModule } from './kesiswaan/tardiness/tardiness.module';
+import { WalasModule } from './walas/walas.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -69,27 +74,37 @@ import * as path from 'path';
       },
     }),
 
-  AuthModule,
-  StudentCardModule,
-  UsersModule,
-  LoggerModule,
-  KelasModule,
-  JurusanModule,
-  ChatModule,
-  ReservasiModule,
-  BkScheduleModule,
-  BkJurusanModule,
-  NewsModule,
-  UploadModule,
-  AdminModule,
-  EmojiModule,
-  ToxicFilterModule,
-  KonsultasiModule,
-  LaporanBkModule,
-  StatisticsModule,
-  ConsultationCategoryModule,
-  CounselingCategoryModule,
-  NewsCategoryModule,
+    // Core Modules
+    AuthModule,
+    StudentCardModule,
+    UsersModule,
+    LoggerModule,
+    KelasModule,
+    JurusanModule,
+    ChatModule,
+    ReservasiModule,
+    BkScheduleModule,
+    BkJurusanModule,
+    NewsModule,
+    UploadModule,
+    AdminModule,
+    EmojiModule,
+    ToxicFilterModule,
+    KonsultasiModule,
+    LaporanBkModule,
+    StatisticsModule,
+    ConsultationCategoryModule,
+    CounselingCategoryModule,
+    NewsCategoryModule,
+
+    // Kesiswaan Modules
+    BimbinganModule,
+    AttendanceModule,
+    ViolationsModule,
+    TardinessModule,
+
+    // External Integration Modules
+    WalasModule,
   ],
 })
 export class AppModule {}

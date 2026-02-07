@@ -23,7 +23,7 @@ import { Repository } from 'typeorm';
 import { SpLetter } from './entities/violation.entity';
 
 @ApiTags('Kesiswaan - Violations & SP Letters')
-@Controller('api/v1/kesiswaan')
+@Controller('v1/kesiswaan')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class ViolationsController {

@@ -634,7 +634,7 @@ __decorate([
 ], BimbinganController.prototype, "getStudentStatus", null);
 exports.BimbinganController = BimbinganController = BimbinganController_1 = __decorate([
     (0, swagger_1.ApiTags)('Kesiswaan - Bimbingan/Guidance'),
-    (0, common_1.Controller)('api/v1/kesiswaan/bimbingan'),
+    (0, common_1.Controller)('v1/kesiswaan/bimbingan'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiBearerAuth)('access-token'),
     __metadata("design:paramtypes", [bimbingan_service_1.BimbinganService])

@@ -17,7 +17,7 @@ import { currentUser } from 'src/auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @ApiTags('Kesiswaan - Bimbingan/Guidance')
-@Controller('api/v1/kesiswaan/bimbingan')
+@Controller('v1/kesiswaan/bimbingan')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('access-token')
 export class BimbinganController {

@@ -498,7 +498,7 @@ __decorate([
 ], ViolationsController.prototype, "exportSpPdf", null);
 exports.ViolationsController = ViolationsController = ViolationsController_1 = __decorate([
     (0, swagger_1.ApiTags)('Kesiswaan - Violations & SP Letters'),
-    (0, common_1.Controller)('api/v1/kesiswaan'),
+    (0, common_1.Controller)('v1/kesiswaan'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiBearerAuth)('access-token'),
     __param(2, (0, typeorm_1.InjectRepository)(violation_entity_1.SpLetter)),

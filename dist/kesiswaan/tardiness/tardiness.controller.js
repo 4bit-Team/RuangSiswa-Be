@@ -345,7 +345,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], TardinessController.prototype, "exportReport", null);
 exports.TardinessController = TardinessController = __decorate([
-    (0, common_1.Controller)('api/v1/kesiswaan/tardiness'),
+    (0, common_1.Controller)('v1/kesiswaan/tardiness'),
     __metadata("design:paramtypes", [tardiness_service_1.TardinessService])
 ], TardinessController);
 //# sourceMappingURL=tardiness.controller.js.map

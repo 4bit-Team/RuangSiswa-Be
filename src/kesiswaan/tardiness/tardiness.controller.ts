@@ -17,7 +17,7 @@ interface AuthRequest extends Request {
   user?: any;
 }
 
-@Controller('api/v1/kesiswaan/tardiness')
+@Controller('v1/kesiswaan/tardiness')
 export class TardinessController {
   constructor(private tardinessService: TardinessService) {}
 
