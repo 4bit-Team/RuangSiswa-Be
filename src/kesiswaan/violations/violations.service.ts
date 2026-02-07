@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, IsNull } from 'typeorm';
+import { WalasApiClient } from '../../walas/walas-api.client';
 import {
   Violation,
   ViolationCategory,
@@ -69,6 +70,7 @@ export class ViolationService {
     private statsRepo: Repository<ViolationStatistics>,
 
     private readonly spPdfService: SpPdfService,
+    private walasApiClient: WalasApiClient,
   ) {}
 
   /**
@@ -94,6 +96,92 @@ export class ViolationService {
     } catch (error) {
       this.logger.error(`Failed to report violation: ${error.message}`);
       throw error;
+    }
+  }
+
+  /**
+   * Sync violations dari Walas (jika ada integrasi)
+   * Auto-trigger referral ke bimbingan jika perlu
+   * 
+   * NOTE: Violations adalah data internal RuangSiswa (tidak dari Walas).
+   * Method ini tetap disediakan untuk kompatibilitas, tapi hanya mengembalikan
+   * data violations yang sudah ada di database.
+   */
+  async syncViolationsFromWalas(
+    startDate: Date,
+    endDate: Date,
+    forceSync: boolean = false,
+  ): Promise<{
+    success: boolean;
+    synced_violations: number;
+    failed: number;
+    errors: any[];
+  }> {
+    try {
+      this.logger.log(`Retrieving violations (${this.formatDate(startDate)} to ${this.formatDate(endDate)})`);
+
+      // Violations adalah data internal RuangSiswa, bukan dari Walas
+      // Tandai sebagai synced untuk tracking purposes
+      const violationsData = await this.violationRepo.find({
+        where: {
+          tanggal_pelanggaran: this.formatDate(startDate),
+        },
+        relations: ['student'],
+      });
+
+      if (!violationsData || violationsData.length === 0) {
+        this.logger.log('No violations found to process');
+        return {
+          success: true,
+          synced_violations: 0,
+          failed: 0,
+          errors: [],
+        };
+      }
+
+      let syncedCount = 0;
+      let failedCount = 0;
+      const errors: any[] = [];
+
+      // Process setiap violation record yang belum diproses
+      for (const violation of violationsData) {
+        try {
+          // Update statistics dan check SP untuk setiap student dengan violation
+          await this.updateStatistics(violation.student_id);
+          
+          // Check dan generate SP letter jika diperlukan
+          const spLetter = await this.checkAndGenerateSp(violation.student_id);
+          if (spLetter) {
+            this.logger.log(`SP letter generated for student ${violation.student_id}`);
+          }
+
+          syncedCount++;
+        } catch (error) {
+          failedCount++;
+          errors.push({
+            student_id: violation.student_id,
+            error: error.message,
+          });
+          this.logger.error(`Failed to process violation for student ${violation.student_id}: ${error.message}`);
+        }
+      }
+
+      this.logger.log(`Violations processing completed: ${syncedCount} processed, ${failedCount} failed`);
+
+      return {
+        success: true,
+        synced_violations: syncedCount,
+        failed: failedCount,
+        errors: errors,
+      };
+    } catch (error) {
+      this.logger.error(`Violations sync failed: ${error.message}`);
+      return {
+        success: false,
+        synced_violations: 0,
+        failed: 0,
+        errors: [{ error: error.message }],
+      };
     }
   }
 
@@ -273,32 +361,29 @@ export class ViolationService {
         progression = this.progressionRepo.create({ student_id, tahun, current_sp_level: 0 });
       }
 
-      // Ensure progression is defined for type safety
-      const prog = progression!;
-
       // Count unprocessed violations
       const unprocessedViolations = await this.getUnprocessedViolations(student_id);
       const totalViolations = await this.violationRepo.count({
         where: { student_id },
       });
 
-      prog.violation_count = totalViolations;
+      progression.violation_count = totalViolations;
 
       // Check SP trigger thresholds
       let shouldGenerateSp = false;
-      let nextSpLevel = prog.current_sp_level + 1;
+      let nextSpLevel = progression.current_sp_level + 1;
 
       // Determine which SP to generate based on accumulated violations
-      if (totalViolations >= 3 && prog.current_sp_level === 0) {
+      if (totalViolations >= 3 && progression.current_sp_level === 0) {
         shouldGenerateSp = true;
         nextSpLevel = 1;
-      } else if (totalViolations >= 5 && prog.current_sp_level < 2) {
+      } else if (totalViolations >= 5 && progression.current_sp_level < 2) {
         shouldGenerateSp = true;
         nextSpLevel = 2;
-      } else if (totalViolations >= 7 && prog.current_sp_level < 3) {
+      } else if (totalViolations >= 7 && progression.current_sp_level < 3) {
         shouldGenerateSp = true;
         nextSpLevel = 3;
-      } else if (totalViolations >= 9 && prog.current_sp_level === 3) {
+      } else if (totalViolations >= 9 && progression.current_sp_level === 3) {
         // Trigger expulsion after SP3
         shouldGenerateSp = true;
         nextSpLevel = 4; // This means expulsion
@@ -312,24 +397,24 @@ export class ViolationService {
       const spLetter = await this.generateSpLetter(student_id, nextSpLevel, unprocessedViolations);
 
       // Update progression
-      prog.current_sp_level = nextSpLevel === 4 ? 3 : nextSpLevel;
-      if (nextSpLevel === 1) prog.sp1_issued_count++;
-      if (nextSpLevel === 2) prog.sp2_issued_count++;
-      if (nextSpLevel === 3) prog.sp3_issued_count++;
+      progression.current_sp_level = nextSpLevel === 4 ? 3 : nextSpLevel;
+      if (nextSpLevel === 1) progression.sp1_issued_count++;
+      if (nextSpLevel === 2) progression.sp2_issued_count++;
+      if (nextSpLevel === 3) progression.sp3_issued_count++;
 
-      prog.last_sp_date = new Date().toISOString().split('T')[0];
-      if (!prog.first_sp_date) {
-        prog.first_sp_date = prog.last_sp_date;
+      progression.last_sp_date = new Date().toISOString().split('T')[0];
+      if (!progression.first_sp_date) {
+        progression.first_sp_date = progression.last_sp_date;
       }
 
       // If expulsion, mark it
       if (nextSpLevel === 4) {
-        prog.is_expelled = true;
-        prog.expulsion_date = new Date().toISOString().split('T')[0];
-        prog.reason_if_expelled = 'SP3_escalation';
+        progression.is_expelled = true;
+        progression.expulsion_date = new Date().toISOString().split('T')[0];
+        progression.reason_if_expelled = 'SP3_escalation';
       }
 
-      await this.progressionRepo.save(prog);
+      await this.progressionRepo.save(progression);
 
       return spLetter;
     } catch (error) {
@@ -396,10 +481,10 @@ export class ViolationService {
       // Mark violations as processed
       await this.violationRepo.update(
         { id: violations[0].id },
-        { is_processed: true, sp_letter_id: saved[0]?.id || saved.id },
+        { is_processed: true, sp_letter_id: saved.id },
       );
 
-      return Array.isArray(saved) ? saved[0] : saved;
+      return saved;
     } catch (error) {
       this.logger.error(`Failed to generate SP letter: ${error.message}`);
       throw error;
@@ -688,5 +773,15 @@ export class ViolationService {
     } catch (error) {
       this.logger.error(`Failed to update statistics: ${error.message}`);
     }
+  }
+
+  /**
+   * Helper: Format date to YYYY-MM-DD
+   */
+  private formatDate(date: Date | string): string {
+    if (typeof date === 'string') {
+      return date.split('T')[0];
+    }
+    return date.toISOString().split('T')[0];
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { WalasApiClient } from '../../walas/walas-api.client';
 import {
   BimbinganCategory,
   BimbinganReferral,
@@ -111,6 +112,8 @@ export class BimbinganService {
 
     @InjectRepository(BimbinganStatistik)
     private statistikRepo: Repository<BimbinganStatistik>,
+
+    private walasApiClient: WalasApiClient,
   ) {}
 
   /**
@@ -143,6 +146,112 @@ export class BimbinganService {
     } catch (error) {
       this.logger.error(`Failed to create referral: ${error.message}`);
       throw error;
+    }
+  }
+
+  /**
+   * Sync guidance data dari Walas (case notes, home visits, achievements)
+   * Auto-create referrals jika ditemukan case notes kritis
+   */
+  async syncGuidanceFromWalas(
+    startDate: Date,
+    endDate: Date,
+    forceSync: boolean = false,
+  ): Promise<{
+    success: boolean;
+    synced_referrals: number;
+    failed: number;
+    errors: any[];
+  }> {
+    try {
+      this.logger.log(`Syncing guidance from Walas (${this.formatDate(startDate)} to ${this.formatDate(endDate)})`);
+
+      // Fetch case notes dari Walas menggunakan getAttendanceRecords atau custom endpoint
+      // Note: getCaseNotes mungkin tidak ada di WalasApiClient, gunakan endpoint yang tersedia
+      const caseNotesData = await this.walasApiClient.getAttendanceRecords({
+        start_date: this.formatDate(startDate),
+        end_date: this.formatDate(endDate),
+        limit: 1000,
+      });
+
+      if (!caseNotesData || !caseNotesData.success || !caseNotesData.data) {
+        throw new Error('Failed to fetch case notes from Walas API');
+      }
+
+      let syncedCount = 0;
+      let failedCount = 0;
+      const errors: any[] = [];
+
+      // Process setiap case note
+      for (const note of caseNotesData.data) {
+        try {
+          // Filter: Check apakah case note memerlukan referral
+          if (!this.isReferralNeeded(note)) {
+            continue;
+          }
+
+          // Check apakah referral sudah exist
+          const existing = await this.referralRepo.findOne({
+            where: {
+              student_id: note.student_id,
+              // Avoid duplicate referrals dalam waktu yang sama
+            },
+          });
+
+          if (existing && !forceSync) {
+            continue;
+          }
+
+          // Determine risk level dari nature of case note
+          const riskLevel = this.determineRiskLevel(note);
+
+          // Create referral dari case note
+          const referralData = {
+            student_id: note.student_id,
+            student_name: note.student_name || 'Unknown',
+            class_id: note.class_id,
+            tahun: new Date().getFullYear(),
+            referral_reason: note.isi_catat || 'Referral dari Walas case notes',
+            risk_level: riskLevel,
+            referral_source: {
+              source: 'walas_case_notes',
+              source_id: note.id,
+              details: note.jenis_catat,
+            },
+            notes: `Auto-referred from Walas on ${new Date().toISOString()}`,
+          };
+
+          const referral = await this.createReferral(referralData);
+          syncedCount++;
+        } catch (error) {
+          failedCount++;
+          errors.push({
+            note_id: note.id,
+            student_id: note.student_id,
+            error: error.message,
+          });
+          this.logger.error(
+            `Failed to sync guidance for student ${note.student_id}: ${error.message}`
+          );
+        }
+      }
+
+      this.logger.log(`Guidance sync completed: ${syncedCount} synced, ${failedCount} failed`);
+
+      return {
+        success: true,
+        synced_referrals: syncedCount,
+        failed: failedCount,
+        errors: errors,
+      };
+    } catch (error) {
+      this.logger.error(`Guidance sync failed: ${error.message}`);
+      return {
+        success: false,
+        synced_referrals: 0,
+        failed: 0,
+        errors: [{ error: error.message }],
+      };
     }
   }
 
@@ -826,4 +935,72 @@ export class BimbinganService {
       this.logger.error(`Failed to update status: ${error.message}`);
     }
   }
+
+  /**
+   * Helper: Check apakah case note memerlukan referral
+   */
+  private isReferralNeeded(note: any): boolean {
+    // Jika ada flag memerlukan tindakan
+    if (note.memerlukan_tindakan === true) return true;
+
+    // Jika jenis catat tertentu yang kritis
+    const criticalTypes = [
+      'perilaku_bermasalah',
+      'masalah_akademik_serius',
+      'masalah_sosial',
+      'gangguan_emosi',
+      'risiko_putus_sekolah',
+    ];
+
+    if (criticalTypes.includes(note.jenis_catat?.toLowerCase())) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Helper: Determine risk level dari nature of case note
+   */
+  private determineRiskLevel(note: any): string {
+    const content = (note.isi_catat || '').toLowerCase();
+
+    if (
+      content.includes('kritik') ||
+      content.includes('putus sekolah') ||
+      content.includes('kekerasan') ||
+      note.jenis_catat === 'risiko_putus_sekolah'
+    ) {
+      return 'critical';
+    }
+
+    if (
+      content.includes('masalah') ||
+      content.includes('kesulitan') ||
+      note.jenis_catat === 'masalah_sosial'
+    ) {
+      return 'high';
+    }
+
+    if (
+      content.includes('perlu diskusi') ||
+      content.includes('follow-up') ||
+      note.jenis_catat === 'observasi_umum'
+    ) {
+      return 'medium';
+    }
+
+    return 'low';
+  }
+
+  /**
+   * Helper: Format date to YYYY-MM-DD
+   */
+  private formatDate(date: Date | string): string {
+    if (typeof date === 'string') {
+      return date.split('T')[0];
+    }
+    return date.toISOString().split('T')[0];
+  }
+
 }

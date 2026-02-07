@@ -10,6 +10,7 @@ import {
   Request,
   HttpException,
   HttpStatus,
+  HttpCode,
 } from '@nestjs/common';
 import { TardinessService } from './tardiness.service';
 
@@ -102,6 +103,46 @@ export class TardinessController {
           message: `Failed to submit tardiness: ${error.message}`,
         },
         HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  /**
+   * POST /api/v1/kesiswaan/tardiness/sync
+   * Trigger sync data tardiness dari Walas
+   * Body: { start_date: "2025-01-01", end_date: "2025-01-31", force_sync?: boolean }
+   */
+  @Post('sync')
+  @HttpCode(200)
+  async sync(
+    @Body()
+    body: {
+      start_date: string;
+      end_date: string;
+      force_sync?: boolean;
+    },
+  ) {
+    try {
+      const result = await this.tardinessService.syncTardinessFromWalas(
+        new Date(body.start_date),
+        new Date(body.end_date),
+        body.force_sync || false,
+      );
+
+      return {
+        success: result.success,
+        message: result.success
+          ? 'Tardiness sync completed successfully'
+          : 'Tardiness sync completed with errors',
+        data: result,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: `Failed to sync tardiness: ${error.message}`,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

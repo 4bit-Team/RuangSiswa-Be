@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
+import { WalasApiClient } from '../../walas/walas-api.client';
 import {
   TardinessRecord,
   TardinessAppeal,
@@ -66,6 +67,8 @@ export class TardinessService {
 
     @InjectRepository(TardinessPattern)
     private patternRepo: Repository<TardinessPattern>,
+
+    private walasApiClient: WalasApiClient,
   ) {}
 
   /**
@@ -102,6 +105,133 @@ export class TardinessService {
     } catch (error) {
       this.logger.error(`Failed to submit tardiness: ${error.message}`);
       throw error;
+    }
+  }
+
+  /**
+   * Sync tardiness data dari Walas attendance (detect based on jam masuk)
+   * Mengambil data kehadiran dari Walas, filter yang terlambat, dan simpan ke database lokal
+   */
+  async syncTardinessFromWalas(
+    startDate: Date,
+    endDate: Date,
+    forceSync: boolean = false,
+  ): Promise<{
+    success: boolean;
+    synced_records: number;
+    failed: number;
+    errors: any[];
+  }> {
+    try {
+      this.logger.log(
+        `Syncing tardiness from Walas (${this.formatDate(startDate)} to ${this.formatDate(endDate)})`,
+      );
+
+      // Fetch attendance data dari Walas API
+      // Walas akan return jadwal masuk sekolah dan jam aktual siswa masuk
+      const walasData = await this.walasApiClient.getAttendanceRecords({
+        start_date: this.formatDate(startDate),
+        end_date: this.formatDate(endDate),
+        limit: 1000,
+      });
+
+      if (!walasData || !walasData.success || !walasData.data) {
+        throw new Error('Failed to fetch attendance from Walas API');
+      }
+
+      let syncedCount = 0;
+      let failedCount = 0;
+      const errors: any[] = [];
+
+      // Process setiap attendance record
+      for (const record of walasData.data) {
+        try {
+          // FILTER: Check apakah siswa terlambat
+          if (!this.isTardy(record)) {
+            continue; // Skip jika tidak terlambat
+          }
+
+          // Check apakah record tardiness sudah exist di database
+          const existing = await this.recordRepo.findOne({
+            where: {
+              student_id: record.student_id,
+              tanggal: this.formatDate(new Date(record.tanggal)),
+            },
+          });
+
+          // Skip jika sudah ada dan bukan force sync
+          if (existing && !forceSync) {
+            continue;
+          }
+
+          // Calculate minutes late
+          const minutesLate = this.calculateMinutesLate(record);
+
+          // Map dari Walas format ke Tardiness format
+          const mappedRecord = {
+            student_id: record.student_id,
+            student_name: record.student_name || 'Unknown',
+            class_id: record.class_id,
+            tanggal: this.formatDate(new Date(record.tanggal)),
+            time: record.actual_time || record.jam_masuk || '00:00',
+            keterlambatan_menit: minutesLate,
+            alasan: record.notes || null,
+            status: 'submitted', // Default status dari sync
+            has_appeal: false,
+            synced_from_walas: true,
+            synced_at: new Date(),
+          };
+
+          // Save atau update
+          if (existing) {
+            // Update existing record
+            Object.assign(existing, mappedRecord);
+            await this.recordRepo.save(existing);
+          } else {
+            // Create new record
+            const newRecord = this.recordRepo.create(mappedRecord);
+            await this.recordRepo.save(newRecord);
+          }
+
+          syncedCount++;
+
+          // Update monthly summary setelah save
+          await this.updateMonthlySummary(
+            record.student_id,
+            record.class_id,
+            this.formatDate(new Date(record.tanggal)),
+          );
+        } catch (error) {
+          failedCount++;
+          errors.push({
+            record_id: record.id,
+            student_id: record.student_id,
+            error: error.message,
+          });
+          this.logger.error(
+            `Failed to sync tardiness for student ${record.student_id}: ${error.message}`,
+          );
+        }
+      }
+
+      this.logger.log(
+        `Tardiness sync completed: ${syncedCount} synced, ${failedCount} failed`,
+      );
+
+      return {
+        success: true,
+        synced_records: syncedCount,
+        failed: failedCount,
+        errors: errors,
+      };
+    } catch (error) {
+      this.logger.error(`Tardiness sync failed: ${error.message}`);
+      return {
+        success: false,
+        synced_records: 0,
+        failed: 0,
+        errors: [{ error: error.message }],
+      };
     }
   }
 
@@ -657,4 +787,66 @@ export class TardinessService {
       reason_if_flagged: is_flagged ? `${count_total} tardiness incidents recorded` : undefined,
     };
   }
+
+  /**
+   * Helper: Check apakah attendance record adalah tardiness
+   * Tergantung format data dari Walas API
+   */
+  private isTardy(record: any): boolean {
+    // Option 1: Ada field is_late atau status_tardiness
+    if (record.is_late === true) return true;
+    if (record.status_tardiness === 'yes') return true;
+
+    // Option 2: Compare actual_time vs scheduled_time
+    if (record.actual_time && record.scheduled_time) {
+      try {
+        const actual = new Date(`2000-01-01 ${record.actual_time}`);
+        const scheduled = new Date(`2000-01-01 ${record.scheduled_time}`);
+        return actual > scheduled;
+      } catch {
+        return false;
+      }
+    }
+
+    // Option 3: Minutes late > 0
+    if (record.minutes_late && record.minutes_late > 0) return true;
+
+    return false;
+  }
+
+  /**
+   * Helper: Calculate minutes late dari attendance record
+   */
+  private calculateMinutesLate(record: any): number {
+    // Option 1: Walas sudah provide minutes_late
+    if (record.minutes_late && record.minutes_late > 0) {
+      return record.minutes_late;
+    }
+
+    // Option 2: Calculate dari time difference
+    if (record.actual_time && record.scheduled_time) {
+      try {
+        const actual = new Date(`2000-01-01 ${record.actual_time}`);
+        const scheduled = new Date(`2000-01-01 ${record.scheduled_time}`);
+        const diffMs = actual.getTime() - scheduled.getTime();
+        const minutes = Math.floor(diffMs / (1000 * 60));
+        return minutes > 0 ? minutes : 0;
+      } catch {
+        return 0;
+      }
+    }
+
+    return 0;
+  }
+
+  /**
+   * Helper: Format date to YYYY-MM-DD string
+   */
+  private formatDate(date: Date | string): string {
+    if (typeof date === 'string') {
+      return date.split('T')[0];
+    }
+    return date.toISOString().split('T')[0];
+  }
+
 }

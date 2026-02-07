@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpException,
   HttpStatus,
+  HttpCode,
   Logger,
   Res,
 } from '@nestjs/common';
@@ -82,6 +83,49 @@ export class ViolationsController {
           error: error.message,
         },
         HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  /**
+   * Sync violations dari Walas
+   * POST /api/v1/kesiswaan/violations/sync
+   */
+  @Post('violations/sync')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Sync violations from Walas (auto-trigger SP & referral)' })
+  @ApiResponse({ status: 200, description: 'Sync completed' })
+  async syncViolationsFromWalas(
+    @Body()
+    body: {
+      start_date: string;
+      end_date: string;
+      force_sync?: boolean;
+    },
+  ) {
+    try {
+      const result = await this.violationService.syncViolationsFromWalas(
+        new Date(body.start_date),
+        new Date(body.end_date),
+        body.force_sync || false,
+      );
+
+      return {
+        success: result.success,
+        message: result.success
+          ? 'Violations sync completed successfully'
+          : 'Violations sync completed with errors',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Error during sync: ${error.message}`);
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to sync violations',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }

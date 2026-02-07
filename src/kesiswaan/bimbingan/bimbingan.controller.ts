@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpException,
   HttpStatus,
+  HttpCode,
   Logger,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -157,6 +158,49 @@ export class BimbinganController {
           error: error.message,
         },
         HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  /**
+   * Sync guidance dari Walas
+   * POST /api/v1/kesiswaan/bimbingan/sync
+   */
+  @Post('sync')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Sync guidance data from Walas (case notes, etc)' })
+  @ApiResponse({ status: 200, description: 'Sync completed' })
+  async syncGuidanceFromWalas(
+    @Body()
+    body: {
+      start_date: string;
+      end_date: string;
+      force_sync?: boolean;
+    },
+  ) {
+    try {
+      const result = await this.bimbinganService.syncGuidanceFromWalas(
+        new Date(body.start_date),
+        new Date(body.end_date),
+        body.force_sync || false,
+      );
+
+      return {
+        success: result.success,
+        message: result.success
+          ? 'Guidance sync completed successfully'
+          : 'Guidance sync completed with errors',
+        data: result,
+      };
+    } catch (error) {
+      this.logger.error(`Error during sync: ${error.message}`);
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to sync guidance',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
