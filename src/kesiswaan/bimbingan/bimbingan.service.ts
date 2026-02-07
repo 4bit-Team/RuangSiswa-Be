@@ -118,20 +118,28 @@ export class BimbinganService {
    */
   async createReferral(dto: CreateReferralDto): Promise<BimbinganReferral> {
     try {
-      const referral = this.referralRepo.create({
-        ...dto,
-        referral_source: typeof dto.referral_source === 'object' ? JSON.stringify(dto.referral_source) : dto.referral_source,
-        status: 'pending',
-        referral_date: new Date().toISOString().split('T')[0],
-      });
+      const referralData = {
+        student_id: dto.student_id,
+        student_name: dto.student_name,
+        class_id: dto.class_id,
+        tahun: dto.tahun,
+        referral_reason: dto.referral_reason,
+        risk_level: dto.risk_level,
+        referral_source: dto.referral_source,
+        notes: dto.notes,
+        status: 'pending' as const,
+        referral_status: 'pending' as const,
+        referral_date: new Date(),
+        guidance_case_id: this.generateUUID(),
+      };
 
+      const referral = this.referralRepo.create(referralData);
       const saved = await this.referralRepo.save(referral);
-      const result = Array.isArray(saved) ? saved[0] : saved;
 
       // Update or create status record
       await this.updateStatus(dto.student_id, dto.tahun);
 
-      return result;
+      return saved;
     } catch (error) {
       this.logger.error(`Failed to create referral: ${error.message}`);
       throw error;
@@ -233,12 +241,26 @@ export class BimbinganService {
         where: { referral_id: dto.referral_id },
       });
 
-      const sesi = this.sesiRepo.create({
-        ...dto,
+      const sesiData = {
+        referral_id: dto.referral_id,
+        student_id: dto.student_id,
+        bk_staff_id: dto.counselor_id,
+        bk_staff_name: dto.counselor_name,
+        tanggal_sesi: new Date(dto.tanggal_sesi),
+        session_date: `${dto.tanggal_sesi} ${dto.jam_sesi || '08:00'}`,
+        location: dto.lokasi || 'BK Office',
+        agenda: dto.topik_pembahasan,
+        notes: dto.topik_pembahasan,
         sesi_ke: count + 1,
-        status: 'scheduled',
-      });
+        status: 'scheduled' as const,
+        session_type: 'individual',
+        guidance_case_id: this.generateUUID(),
+        duration_minutes: 30,
+        student_attended: false,
+        siswa_hadir: false,
+      };
 
+      const sesi = this.sesiRepo.create(sesiData);
       const saved = await this.sesiRepo.save(sesi);
 
       // Update referral status
@@ -342,11 +364,18 @@ export class BimbinganService {
    */
   async addCatat(dto: CreateCatatDto): Promise<BimbinganCatat> {
     try {
-      const catat = this.catatRepo.create({
-        ...dto,
+      const catatData = {
+        student_id: dto.student_id,
+        note_content: dto.isi_catat,
+        note_type: dto.jenis_catat || 'observation',
+        created_by: dto.counselor_id,
+        created_by_name: dto.counselor_name,
+        created_by_role: 'BK',
+        guidance_case_id: this.generateUUID(),
         status: 'confidential',
-      });
+      };
 
+      const catat = this.catatRepo.create(catatData);
       return this.catatRepo.save(catat);
     } catch (error) {
       this.logger.error(`Failed to add case note: ${error.message}`);
@@ -404,11 +433,19 @@ export class BimbinganService {
    */
   async createIntervensi(dto: CreateIntervensiDto): Promise<BimbinganIntervensi> {
     try {
-      const intervensi = this.intervensiRepo.create({
-        ...dto,
-        status: 'ongoing',
-      });
+      const interventionData = {
+        student_id: dto.student_id,
+        intervention_name: dto.jenis_intervensi,
+        intervention_description: dto.deskripsi_intervensi,
+        intervention_type: 'counseling' as const,
+        responsible_party_id: dto.counselor_id,
+        responsible_party_name: dto.counselor_name,
+        start_date: dto.tanggal_intervensi,
+        status: 'in_progress' as const,
+        guidance_case_id: this.generateUUID(),
+      };
 
+      const intervensi = this.intervensiRepo.create(interventionData);
       return this.intervensiRepo.save(intervensi);
     } catch (error) {
       this.logger.error(`Failed to create intervention: ${error.message}`);
@@ -520,16 +557,21 @@ export class BimbinganService {
       const status_keseluruhan =
         avgScore >= 4 ? 'improving' : avgScore >= 2.5 ? 'stable' : 'declining';
 
-      const perkembangan = this.perkembanganRepo.create({
+      const perkembanganData = {
         referral_id,
         student_id,
         student_name,
         counselor_id,
+        assessment_date: new Date().toISOString().split('T')[0],
         tanggal_evaluasi: new Date().toISOString().split('T')[0],
         status_keseluruhan,
-        ...evaluasi,
-      });
+        guidance_case_id: this.generateUUID(),
+        assessed_by: counselor_id,
+        behavioral_observations: evaluasi.perilaku_catatan,
+        assessment_comments: evaluasi.akademik_catatan,
+      };
 
+      const perkembangan = this.perkembanganRepo.create(perkembanganData);
       return this.perkembanganRepo.save(perkembangan);
     } catch (error) {
       this.logger.error(`Failed to record progress: ${error.message}`);
@@ -580,11 +622,15 @@ export class BimbinganService {
    */
   async createTarget(dto: CreateTargetDto): Promise<BimbinganTarget> {
     try {
-      const target = this.targetRepo.create({
-        ...dto,
-        status: 'active',
-      });
+      const targetData = {
+        target_description: `${dto.area_target}: ${dto.target_spesifik}`,
+        target_date: new Date(dto.tanggal_target),
+        status: 'pending' as const,
+        guidance_case_id: this.generateUUID(),
+        progress_percentage: 0,
+      };
 
+      const target = this.targetRepo.create(targetData);
       return this.targetRepo.save(target);
     } catch (error) {
       this.logger.error(`Failed to create target: ${error.message}`);
@@ -666,8 +712,60 @@ export class BimbinganService {
   }
 
   /**
+   * Get all guidance statuses with pagination
+   */
+  async getAllStatuses(filters?: {
+    tahun?: number;
+    page?: number;
+    limit?: number;
+    risk_level?: string;
+    status?: string;
+  }): Promise<{ data: BimbinganStatus[]; total: number; page: number; limit: number }> {
+    try {
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 20;
+      const year = filters?.tahun || new Date().getFullYear();
+
+      let query = this.statusRepo.createQueryBuilder('s')
+        .where('s.tahun = :tahun', { tahun: year });
+
+      if (filters?.risk_level) {
+        query = query.andWhere('s.current_risk_level = :risk_level', {
+          risk_level: filters.risk_level,
+        });
+      }
+
+      if (filters?.status) {
+        query = query.andWhere('s.status = :status', {
+          status: filters.status,
+        });
+      }
+
+      const total = await query.getCount();
+      const data = await query
+        .orderBy('s.student_id', 'ASC')
+        .skip((page - 1) * limit)
+        .take(limit)
+        .getMany();
+
+      return { data, total, page, limit };
+    } catch (error) {
+      this.logger.error(`Failed to get all statuses: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * ===== PRIVATE HELPER METHODS =====
    */
+
+  private generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
 
   private async updateStatus(student_id: number, tahun: number): Promise<void> {
     try {

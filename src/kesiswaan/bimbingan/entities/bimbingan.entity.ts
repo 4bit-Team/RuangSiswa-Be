@@ -18,13 +18,13 @@ import {
  */
 
 /**
- * GuidanceCategory - Master data for guidance case types
+ * BimbinganCategory - Master data for guidance case types
  * Examples: Attendance issues, Academic problems, Behavioral issues, Social problems, etc.
  */
-@Entity('guidance_categories')
-@Index('idx_guidance_code', ['code'], { unique: true })
-@Index('idx_guidance_active', ['is_active'])
-export class GuidanceCategory {
+@Entity('bimbingan_categories')
+@Index(['code'], { unique: true })
+@Index(['is_active'])
+export class BimbinganCategory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -58,10 +58,10 @@ export class GuidanceCategory {
  * Created automatically from: excessive absences (Fitur 1), tardiness (Fitur 2), or violations (Fitur 3)
  */
 @Entity('guidance_cases')
-@Index('idx_guidance_case_student_tahun', ['student_id', 'tahun'])
-@Index('idx_guidance_case_status', ['status'])
-@Index('idx_guidance_case_risk', ['risk_level'])
-@Index('idx_guidance_case_created', ['created_at'])
+@Index(['student_id', 'tahun'])
+@Index(['status'])
+@Index(['risk_level'])
+@Index(['created_at'])
 export class GuidanceCase {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -168,14 +168,14 @@ export class GuidanceCase {
 }
 
 /**
- * GuidanceSession - Individual counseling/guidance session
+ * BimbinganSesi - Individual counseling/guidance session
  * Scheduled meetings between BK staff and student
  */
-@Entity('guidance_sessions')
-@Index('idx_session_case', ['guidance_case_id'])
-@Index('idx_session_student_date', ['student_id', 'session_date'])
-@Index('idx_session_status', ['status'])
-export class GuidanceSession {
+@Entity('bimbingan_sesi')
+@Index(['guidance_case_id'])
+@Index(['student_id', 'session_date'])
+@Index(['status'])
+export class BimbinganSesi {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -274,14 +274,14 @@ export class GuidanceSession {
 }
 
 /**
- * GuidanceNote - Case notes and progress tracking
+ * BimbinganCatat - Case notes and progress tracking
  * Detailed documentation of observations and progress
  */
-@Entity('guidance_notes')
-@Index('idx_note_case', ['guidance_case_id'])
-@Index('idx_note_by', ['created_by'])
-@Index('idx_note_created', ['created_at'])
-export class GuidanceNote {
+@Entity('bimbingan_catat')
+@Index(['guidance_case_id'])
+@Index(['created_by'])
+@Index(['created_at'])
+export class BimbinganCatat {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -315,8 +315,8 @@ export class GuidanceNote {
   created_by_role: string; // "BK", "Teacher", "Parent"
 
   // Attachments
-  @Column({ type: 'text', nullable: true })
-  attachments: string; // JSON array of file paths of attached documents
+  @Column({ type: 'json', nullable: true })
+  attachments: string[]; // File paths of attached documents
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   status: string;
@@ -329,14 +329,14 @@ export class GuidanceNote {
 }
 
 /**
- * GuidanceIntervention - Specific interventions assigned to student
+ * BimbinganIntervensi - Specific interventions assigned to student
  * Examples: Career counseling, Academic tutoring, Anger management, etc.
  */
-@Entity('guidance_interventions')
-@Index('idx_intervention_case', ['guidance_case_id'])
-@Index('idx_intervention_student', ['student_id'])
-@Index('idx_intervention_status', ['status'])
-export class GuidanceIntervention {
+@Entity('bimbingan_intervensi')
+@Index(['guidance_case_id'])
+@Index(['student_id'])
+@Index(['status'])
+export class BimbinganIntervensi {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -413,9 +413,9 @@ export class GuidanceIntervention {
  * Important for parental involvement in guidance process
  */
 @Entity('guidance_parent_communications')
-@Index('idx_comm_case', ['guidance_case_id'])
-@Index('idx_comm_student', ['student_id'])
-@Index('idx_comm_date', ['communication_date'])
+@Index(['guidance_case_id'])
+@Index(['student_id'])
+@Index(['communication_date'])
 export class GuidanceParentCommunication {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -465,13 +465,13 @@ export class GuidanceParentCommunication {
 }
 
 /**
- * GuidanceProgress - Overall progress tracking for guidance case
+ * BimbinganPerkembangan - Overall progress tracking for guidance case
  * Measures improvement in student behavior, attendance, grades
  */
-@Entity('guidance_progress')
-@Index('idx_progress_case', ['guidance_case_id'])
-@Index('idx_progress_student_date', ['student_id', 'assessment_date'])
-export class GuidanceProgress {
+@Entity('bimbingan_perkembangan')
+@Index(['guidance_case_id'])
+@Index(['student_id', 'assessment_date'])
+export class BimbinganPerkembangan {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -556,14 +556,14 @@ export class GuidanceProgress {
 }
 
 /**
- * GuidanceReferral - Referrals to external services
+ * BimbinganReferral - Referrals to external services
  * When student needs specialized help (psychologist, medical, etc.)
  */
-@Entity('guidance_referrals')
-@Index('idx_referral_student_tahun', ['student_id', 'tahun'])
-@Index('idx_referral_status', ['referral_status'])
-@Index('idx_referral_risk', ['risk_level'])
-export class GuidanceReferral {
+@Entity('bimbingan_referral')
+@Index(['student_id', 'tahun'])
+@Index(['referral_status'])
+@Index(['risk_level'])
+export class BimbinganReferral {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -619,8 +619,8 @@ export class GuidanceReferral {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @Column({ type: 'text', nullable: true })
-  referral_source: string; // JSON object as string: { source, source_id, details }
+  @Column({ type: 'json', nullable: true })
+  referral_source: { source: string; source_id: string; details: string } | null;
 
   @Column({ type: 'date', nullable: true })
   first_appointment_date: string;
@@ -651,12 +651,12 @@ export class GuidanceReferral {
 }
 
 /**
- * GuidanceStatistics - Aggregate statistics for dashboards
+ * BimbinganStatistik - Aggregate statistics for dashboards
  * Cached for performance optimization
  */
-@Entity('guidance_statistics')
-@Index('idx_stat_tahun', ['tahun'])
-export class GuidanceStatistics {
+@Entity('bimbingan_statistik')
+@Index(['tahun'])
+export class BimbinganStatistik {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -713,10 +713,10 @@ export class GuidanceStatistics {
 /**
  * Student Guidance Ability/Skill Assessment
  */
-@Entity('guidance_abilities')
-@Index('idx_ability_case', ['guidance_case_id'])
-@Index('idx_ability_skill', ['skill_type'])
-export class GuidanceAbility {
+@Entity('bimbingan_ability')
+@Index(['guidance_case_id'])
+@Index(['skill_type'])
+export class BimbinganAbility {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -742,10 +742,10 @@ export class GuidanceAbility {
 /**
  * Guidance Goals/Targets
  */
-@Entity('guidance_targets')
-@Index('idx_target_case', ['guidance_case_id'])
-@Index('idx_target_status', ['status'])
-export class GuidanceTarget {
+@Entity('bimbingan_target')
+@Index(['guidance_case_id'])
+@Index(['status'])
+export class BimbinganTarget {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -774,10 +774,10 @@ export class GuidanceTarget {
 /**
  * Guidance Case Status History
  */
-@Entity('guidance_statuses')
-@Index('idx_gstatus_student_tahun', ['student_id', 'tahun'])
-@Index('idx_gstatus_type', ['status_type'])
-export class GuidanceStatus {
+@Entity('bimbingan_status')
+@Index(['student_id', 'tahun'])
+@Index(['status_type'])
+export class BimbinganStatus {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -833,14 +833,14 @@ export class GuidanceStatus {
   updated_at: Date;
 }
 
-// Export aliases for backward compatibility (both value and type)
-export { GuidanceCategory as BimbinganCategory };
-export { GuidanceReferral as BimbinganReferral };
-export { GuidanceSession as BimbinganSesi };
-export { GuidanceNote as BimbinganCatat };
-export { GuidanceIntervention as BimbinganIntervensi };
-export { GuidanceProgress as BimbinganPerkembangan };
-export { GuidanceAbility as BimbinganAbility };
-export { GuidanceTarget as BimbinganTarget };
-export { GuidanceStatus as BimbinganStatus };
-export { GuidanceStatistics as BimbinganStatistik };
+// Export aliases for backward compatibility with original names
+export { BimbinganCategory as GuidanceCategory };
+export { BimbinganReferral as GuidanceReferral };
+export { BimbinganSesi as GuidanceSession };
+export { BimbinganCatat as GuidanceNote };
+export { BimbinganIntervensi as GuidanceIntervention };
+export { BimbinganPerkembangan as GuidanceProgress };
+export { BimbinganAbility as GuidanceAbility };
+export { BimbinganTarget as GuidanceTarget };
+export { BimbinganStatus as GuidanceStatus };
+export { BimbinganStatistik as GuidanceStatistics };

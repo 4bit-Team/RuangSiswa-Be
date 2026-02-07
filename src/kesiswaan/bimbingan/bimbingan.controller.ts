@@ -745,4 +745,50 @@ export class BimbinganController {
       );
     }
   }
+
+  /**
+   * Get all guidance statuses with filters
+   * GET /api/v1/kesiswaan/bimbingan/statuses
+   */
+  @Get('statuses')
+  @ApiOperation({ summary: 'Get all guidance statuses with filters' })
+  @ApiResponse({ status: 200, description: 'Statuses retrieved' })
+  async getAllStatuses(
+    @Query('tahun') tahun?: number,
+    @Query('risk_level') risk_level?: string,
+    @Query('status') status?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    try {
+      const result = await this.bimbinganService.getAllStatuses({
+        tahun: tahun ? parseInt(tahun.toString()) : undefined,
+        risk_level,
+        status,
+        page: page ? parseInt(page.toString()) : 1,
+        limit: limit ? parseInt(limit.toString()) : 20,
+      });
+
+      return {
+        success: true,
+        message: 'Statuses retrieved',
+        data: result.data,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Error getting statuses: ${error.message}`);
+      throw new HttpException(
+        {
+          success: false,
+          message: 'Failed to get statuses',
+          error: error.message,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
 }
