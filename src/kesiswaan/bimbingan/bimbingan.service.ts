@@ -150,8 +150,8 @@ export class BimbinganService {
   }
 
   /**
-   * Sync guidance data dari Walas (case notes, home visits, achievements)
-   * Auto-create referrals jika ditemukan case notes kritis
+   * Sync guidance data dari Walas (case notes)
+   * Auto-create referrals jika ditemukan case notes yang memerlukan referral
    */
   async syncGuidanceFromWalas(
     startDate: Date,
@@ -166,39 +166,57 @@ export class BimbinganService {
     try {
       this.logger.log(`Syncing guidance from Walas (${this.formatDate(startDate)} to ${this.formatDate(endDate)})`);
 
-      // Fetch case notes dari Walas menggunakan getAttendanceRecords atau custom endpoint
-      // Note: getCaseNotes mungkin tidak ada di WalasApiClient, gunakan endpoint yang tersedia
-      const caseNotesData = await this.walasApiClient.getAttendanceRecords({
+      // Fetch case notes dari Walas API
+      const caseNotesData = await this.walasApiClient.getAllCaseNotes({
         start_date: this.formatDate(startDate),
         end_date: this.formatDate(endDate),
-        limit: 1000,
+        limit: 500,
       });
 
-      if (!caseNotesData || !caseNotesData.success || !caseNotesData.data) {
-        throw new Error('Failed to fetch case notes from Walas API');
+      if (!caseNotesData || !caseNotesData.data) {
+        this.logger.log('No case notes found to process');
+        return {
+          success: true,
+          synced_referrals: 0,
+          failed: 0,
+          errors: [],
+        };
       }
 
       let syncedCount = 0;
       let failedCount = 0;
       const errors: any[] = [];
 
+      // Get actual notes array (handle both paginated and direct response)
+      const notes = Array.isArray(caseNotesData.data) 
+        ? caseNotesData.data 
+        : (caseNotesData.data?.data || []);
+
+      this.logger.log(`[SYNC DEBUG] Total case notes from Walas API: ${notes.length}`);
+
       // Process setiap case note
-      for (const note of caseNotesData.data) {
+      for (const note of notes) {
         try {
           // Filter: Check apakah case note memerlukan referral
           if (!this.isReferralNeeded(note)) {
+            this.logger.log(`[SYNC DEBUG] Note id=${note.id} filtered out. Note data: 
+              student_id=${note.student_id}, 
+              memerlukan_tindakan=${note.memerlukan_tindakan}, 
+              isi_catat=${note.isi_catat?.substring(0, 50)}`);
             continue;
           }
+          
+          this.logger.log(`[SYNC DEBUG] Processing note id=${note.id} for student ${note.student_id}`);
 
           // Check apakah referral sudah exist
           const existing = await this.referralRepo.findOne({
             where: {
               student_id: note.student_id,
-              // Avoid duplicate referrals dalam waktu yang sama
             },
           });
 
           if (existing && !forceSync) {
+            this.logger.log(`[SYNC DEBUG] Referral already exists for student ${note.student_id}, skipping (use forceSync to override)`);
             continue;
           }
 
@@ -209,20 +227,78 @@ export class BimbinganService {
           const referralData = {
             student_id: note.student_id,
             student_name: note.student_name || 'Unknown',
-            class_id: note.class_id,
+            class_id: 0, // Akan di-update dari data lain jika diperlukan
             tahun: new Date().getFullYear(),
-            referral_reason: note.isi_catat || 'Referral dari Walas case notes',
+            referral_reason: note.keterangan || 'Referral dari Walas case notes',
             risk_level: riskLevel,
             referral_source: {
               source: 'walas_case_notes',
               source_id: note.id,
-              details: note.jenis_catat,
+              details: note.tindakan || 'Case note',
             },
             notes: `Auto-referred from Walas on ${new Date().toISOString()}`,
           };
 
           const referral = await this.createReferral(referralData);
           syncedCount++;
+          this.logger.log(`Created referral for student ${note.student_id} from case note`);
+
+          // Also create catat (case notes) from Walas case notes
+          try {
+            const catatContent = note.kasus 
+              ? `Kasus: ${note.kasus}\nTindak Lanjut: ${note.tindak_lanjut || '-'}\nKeterangan: ${note.keterangan || '-'}`
+              : (note.isi_catat || 'Case note dari Walas');
+
+            // Determine note type based on kasus
+            const determineNoteType = (kasus: string): string => {
+              const caseText = (kasus || '').toLowerCase();
+              if (caseText.includes('bolos') || caseText.includes('absen') || caseText.includes('tidak hadir')) {
+                return 'observation';
+              }
+              if (caseText.includes('terlambat') || caseText.includes('telat')) {
+                return 'observation';
+              }
+              if (caseText.includes('pelanggaran') || caseText.includes('melanggar')) {
+                return 'incident';
+              }
+              return 'observation'; // default
+            };
+
+            // Get walas info from Walas API if available
+            let createdByName = 'Walas';
+            let createdById: string;
+            
+            if (note.walas_id) {
+              // Convert numeric walas_id to UUID format (deterministic)
+              createdById = `00000000-0000-0000-0000-${String(note.walas_id).padStart(12, '0')}`;
+              
+              try {
+                const walasInfo = await this.walasApiClient.getWalasById(note.walas_id);
+                if (walasInfo && walasInfo.name) {
+                  createdByName = walasInfo.name;
+                }
+              } catch (walasError) {
+                this.logger.warn(`Could not fetch walas info for id ${note.walas_id}: ${walasError.message}`);
+              }
+
+              const catatData = {
+                guidance_case_id: referral.guidance_case_id,
+                student_id: note.student_id,
+                note_content: catatContent,
+                note_type: determineNoteType(note.kasus),
+                created_by: createdById,
+                created_by_name: createdByName,
+                created_by_role: 'Walas',
+                status: 'confidential',
+              };
+
+              const catat = this.catatRepo.create(catatData);
+              await this.catatRepo.save(catat);
+              this.logger.log(`Created catat for student ${note.student_id} by ${createdByName}`);
+            }
+          } catch (catatError) {
+            this.logger.warn(`Failed to create catat for referral ${referral.id}: ${catatError.message}`);
+          }
         } catch (error) {
           failedCount++;
           errors.push({
@@ -887,10 +963,12 @@ export class BimbinganService {
           student_id,
           tahun,
           status: 'referred',
+          status_type: 'open',
           current_risk_level: 'yellow',
         });
       } else {
         status.status = 'referred';
+        status.status_type = 'open';
         status.current_risk_level = 'yellow';
       }
 
@@ -943,16 +1021,9 @@ export class BimbinganService {
     // Jika ada flag memerlukan tindakan
     if (note.memerlukan_tindakan === true) return true;
 
-    // Jika jenis catat tertentu yang kritis
-    const criticalTypes = [
-      'perilaku_bermasalah',
-      'masalah_akademik_serius',
-      'masalah_sosial',
-      'gangguan_emosi',
-      'risiko_putus_sekolah',
-    ];
-
-    if (criticalTypes.includes(note.jenis_catat?.toLowerCase())) {
+    // Jika jenis catat atau keterangan ada, sync semuanya
+    // (relax filter agar semua case notes bisa di-sync)
+    if (note.id && note.student_id && (note.isi_catat || note.keterangan)) {
       return true;
     }
 

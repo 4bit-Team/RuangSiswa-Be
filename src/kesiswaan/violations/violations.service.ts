@@ -126,7 +126,6 @@ export class ViolationService {
         where: {
           tanggal_pelanggaran: this.formatDate(startDate),
         },
-        relations: ['student'],
       });
 
       if (!violationsData || violationsData.length === 0) {

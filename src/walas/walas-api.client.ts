@@ -247,8 +247,40 @@ export class WalasApiClient {
   // ========== SECTION C: CASE NOTES APIs ==========
 
   /**
-   * Get case notes for student
-   * GET /api/v1/walas/case-notes/{studentId}
+   * Get all case notes with filters
+   * GET /api/v1/walas/case-notes?start_date=2025-01-01&end_date=2025-01-31&limit=100&page=1
+   */
+  async getAllCaseNotes(filters?: {
+    start_date?: string;
+    end_date?: string;
+    walas_id?: number;
+    limit?: number;
+    page?: number;
+  }) {
+    try {
+      const params = new URLSearchParams();
+      if (filters?.start_date) params.append('start_date', filters.start_date);
+      if (filters?.end_date) params.append('end_date', filters.end_date);
+      if (filters?.walas_id) params.append('walas_id', filters.walas_id.toString());
+      if (filters?.limit) params.append('limit', (filters.limit || 100).toString());
+      if (filters?.page) params.append('page', (filters.page || 1).toString());
+
+      const url = this.buildUrl(
+        `/api/v1/walas/case-notes${params.toString() ? '?' + params.toString() : ''}`
+      );
+      const response = await firstValueFrom(
+        this.httpService.get(url, { headers: this.getHeaders() })
+      );
+
+      return response.data;
+    } catch (error) {
+      this.handleError(error as AxiosError, 'getAllCaseNotes');
+    }
+  }
+
+  /**
+   * Get case notes for a specific student
+   * GET /api/v1/walas/case-notes/byStudent/{studentId}
    */
   async getCaseNotes(studentId: number, filters?: {
     limit?: number;
@@ -260,7 +292,7 @@ export class WalasApiClient {
       if (filters?.page) query.append('page', filters.page.toString());
 
       const url = this.buildUrl(
-        `/api/v1/walas/case-notes/${studentId}${query.toString() ? '?' + query.toString() : ''}`
+        `/api/v1/walas/case-notes/byStudent/${studentId}${query.toString() ? '?' + query.toString() : ''}`
       );
       const response = await firstValueFrom(
         this.httpService.get(url, { headers: this.getHeaders() })
@@ -274,7 +306,7 @@ export class WalasApiClient {
 
   /**
    * Get case notes by walas
-   * GET /api/v1/walas/case-notes/walas/{walasId}
+   * GET /api/v1/walas/case-notes/byWalas/{walasId}
    */
   async getCaseNotesByWalas(walasId: number, filters?: {
     limit?: number;
@@ -286,7 +318,7 @@ export class WalasApiClient {
       if (filters?.page) query.append('page', filters.page.toString());
 
       const url = this.buildUrl(
-        `/api/v1/walas/case-notes/walas/${walasId}${query.toString() ? '?' + query.toString() : ''}`
+        `/api/v1/walas/case-notes/byWalas/${walasId}${query.toString() ? '?' + query.toString() : ''}`
       );
       const response = await firstValueFrom(
         this.httpService.get(url, { headers: this.getHeaders() })
@@ -619,6 +651,25 @@ export class WalasApiClient {
       return response.data.data;
     } catch (error) {
       this.handleError(error as AxiosError, 'getAchievementTypeStats');
+    }
+  }
+
+  // ========== SECTION G: WALAS/TEACHER DATA APIs ==========
+
+  /**
+   * Get walas (teacher) info by ID
+   * GET /api/v1/walas/walas/{id}
+   */
+  async getWalasById(walasId: number) {
+    try {
+      const url = this.buildUrl(`/api/v1/walas/walas/${walasId}`);
+      const response = await firstValueFrom(
+        this.httpService.get(url, { headers: this.getHeaders() })
+      );
+
+      return response.data.data || response.data;
+    } catch (error) {
+      this.handleError(error as AxiosError, 'getWalasById');
     }
   }
 

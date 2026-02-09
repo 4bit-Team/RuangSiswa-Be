@@ -50,7 +50,7 @@ export class AttendanceService {
         limit: 1000,
       });
 
-      if (!walasData.success || !walasData.data) {
+      if (!walasData || !walasData.success || !walasData.data) {
         throw new Error('Failed to fetch from Walas API');
       }
 
