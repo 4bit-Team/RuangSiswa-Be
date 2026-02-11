@@ -129,14 +129,14 @@ let StatisticsService = class StatisticsService {
         const lastDayCurrentMonth = new Date(currentYear, now.getMonth() + 1, 0);
         const currentMonthCount = await this.laporanBkRepository.count({
             where: {
-                createdAt: (0, typeorm_2.Between)(firstDayCurrentMonth, lastDayCurrentMonth),
+                created_at: (0, typeorm_2.Between)(firstDayCurrentMonth, lastDayCurrentMonth),
             },
         });
         const firstDayPrevMonth = new Date(currentYear, now.getMonth() - 1, 1);
         const lastDayPrevMonth = new Date(currentYear, now.getMonth(), 0);
         const prevMonthCount = await this.laporanBkRepository.count({
             where: {
-                createdAt: (0, typeorm_2.Between)(firstDayPrevMonth, lastDayPrevMonth),
+                created_at: (0, typeorm_2.Between)(firstDayPrevMonth, lastDayPrevMonth),
             },
         });
         const trend = prevMonthCount !== 0

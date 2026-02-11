@@ -178,7 +178,7 @@ export class StatisticsService {
 
     const currentMonthCount = await this.laporanBkRepository.count({
       where: {
-        createdAt: Between(firstDayCurrentMonth, lastDayCurrentMonth),
+        created_at: Between(firstDayCurrentMonth, lastDayCurrentMonth),
       },
     });
 
@@ -188,7 +188,7 @@ export class StatisticsService {
 
     const prevMonthCount = await this.laporanBkRepository.count({
       where: {
-        createdAt: Between(firstDayPrevMonth, lastDayPrevMonth),
+        created_at: Between(firstDayPrevMonth, lastDayPrevMonth),
       },
     });
 

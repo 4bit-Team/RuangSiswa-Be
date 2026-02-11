@@ -12,4 +12,5 @@ export declare class GroupReservasiController {
     findOne(id: string): Promise<import("./entities/group-reservasi.entity").GroupReservasi | null>;
     updateStatus(id: string, updateStatusDto: UpdateGroupReservasiStatusDto, req: any): Promise<import("./entities/group-reservasi.entity").GroupReservasi>;
     remove(id: string, req: any): Promise<import("./entities/group-reservasi.entity").GroupReservasi>;
+    initializeSessionResources(id: string, req: any): Promise<import("./entities/group-reservasi.entity").GroupReservasi>;
 }

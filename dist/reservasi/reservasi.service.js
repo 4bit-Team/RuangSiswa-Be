@@ -52,15 +52,27 @@ const typeorm_2 = require("typeorm");
 const reservasi_entity_1 = require("./entities/reservasi.entity");
 const counseling_category_entity_1 = require("../counseling-category/entities/counseling-category.entity");
 const chat_service_1 = require("../chat/chat.service");
+const pembinaan_entity_1 = require("../kesiswaan/pembinaan/entities/pembinaan.entity");
+const pembinaan_waka_entity_1 = require("../kesiswaan/pembinaan-waka/entities/pembinaan-waka.entity");
+const laporan_bk_service_1 = require("../laporan-bk/laporan-bk.service");
+const notification_service_1 = require("../notifications/notification.service");
 const QRCode = __importStar(require("qrcode"));
 let ReservasiService = class ReservasiService {
     reservasiRepository;
     categoryRepository;
+    pembinaanRepository;
+    pembinaanWakaRepository;
     chatService;
-    constructor(reservasiRepository, categoryRepository, chatService) {
+    laporanBkService;
+    notificationService;
+    constructor(reservasiRepository, categoryRepository, pembinaanRepository, pembinaanWakaRepository, chatService, laporanBkService, notificationService) {
         this.reservasiRepository = reservasiRepository;
         this.categoryRepository = categoryRepository;
+        this.pembinaanRepository = pembinaanRepository;
+        this.pembinaanWakaRepository = pembinaanWakaRepository;
         this.chatService = chatService;
+        this.laporanBkService = laporanBkService;
+        this.notificationService = notificationService;
     }
     async create(createReservasiDto) {
         let topic = null;
@@ -163,6 +175,27 @@ let ReservasiService = class ReservasiService {
                     });
                     reservasi.qrCode = await QRCode.toDataURL(qrData);
                 }
+                if (reservasi.counselingType === 'khusus' && reservasi.pembinaanType === 'ringan') {
+                    try {
+                        const fullReservasi = await this.reservasiRepository.findOne({
+                            where: { id: reservasi.id },
+                            relations: ['student', 'pembinaan'],
+                        });
+                        if (fullReservasi && fullReservasi.pembinaan) {
+                            const laporanBkDto = {
+                                reservasi_id: fullReservasi.id,
+                                pembinaan_id: fullReservasi.pembinaan_id,
+                                student_id: fullReservasi.studentId,
+                                bk_id: fullReservasi.counselorId,
+                            };
+                            await this.laporanBkService.create(laporanBkDto);
+                            console.log(`✅ Auto-created LaporanBK for ringan reservasi ${fullReservasi.id}`);
+                        }
+                    }
+                    catch (error) {
+                        console.warn('Failed to auto-create LaporanBK for ringan reservasi:', error);
+                    }
+                }
             }
             catch (error) {
                 console.error('Error creating conversation or QR:', error);
@@ -173,7 +206,71 @@ let ReservasiService = class ReservasiService {
         if (updateStatusDto.rejectionReason) {
             reservasi.rejectionReason = updateStatusDto.rejectionReason;
         }
-        return await this.reservasiRepository.save(reservasi);
+        const updatedReservasi = await this.reservasiRepository.save(reservasi);
+        try {
+            if (updateStatusDto.status === 'approved') {
+                if (updatedReservasi.counselingType === 'khusus' && updatedReservasi.pembinaanType) {
+                    if (this.notificationService) {
+                        await this.notificationService.create({
+                            recipient_id: updatedReservasi.counselorId,
+                            type: 'pembinaan_disetujui',
+                            title: 'Pembinaan Disetujui',
+                            message: `Pembinaan untuk siswa dari reservasi ID ${updatedReservasi.id} telah disetujui oleh ${updatedReservasi.pembinaanType === 'ringan' ? 'BK' : 'WAKA'}. Siap untuk dimulai pada ${new Date(updatedReservasi.preferredDate).toLocaleDateString('id-ID')}.`,
+                            related_id: updatedReservasi.id,
+                            related_type: 'reservasi',
+                            metadata: {
+                                student_id: updatedReservasi.studentId,
+                                pembinaan_type: updatedReservasi.pembinaanType,
+                                preferred_date: updatedReservasi.preferredDate,
+                                approved_by: updatedReservasi.counselorId,
+                            },
+                        });
+                        console.log(`✅ Notification sent: pembinaan_disetujui for kesiswaan`);
+                    }
+                }
+                else {
+                    if (this.notificationService) {
+                        await this.notificationService.create({
+                            recipient_id: updatedReservasi.studentId,
+                            type: 'reservasi_approved',
+                            title: 'Reservasi Disetujui',
+                            message: `Reservasi konseling ${updatedReservasi.type || 'Anda'} telah disetujui. Silakan cek jadwal sesi Anda.`,
+                            related_id: updatedReservasi.id,
+                            related_type: 'reservasi',
+                            metadata: {
+                                student_id: updatedReservasi.studentId,
+                                counselor_id: updatedReservasi.counselorId,
+                                reservasi_type: updatedReservasi.type,
+                                preferred_date: updatedReservasi.preferredDate,
+                            },
+                        });
+                        console.log(`✅ Notification sent: reservasi_approved for student ${updatedReservasi.studentId}`);
+                    }
+                }
+            }
+            else if (updateStatusDto.status === 'rejected') {
+                if (this.notificationService) {
+                    await this.notificationService.create({
+                        recipient_id: updatedReservasi.studentId,
+                        type: 'reservasi_rejected',
+                        title: 'Reservasi Ditolak',
+                        message: `Reservasi konseling Anda ditolak oleh konselor. ${updateStatusDto.rejectionReason ? `Alasan: ${updateStatusDto.rejectionReason}` : ''}`,
+                        related_id: updatedReservasi.id,
+                        related_type: 'reservasi',
+                        metadata: {
+                            student_id: updatedReservasi.studentId,
+                            counselor_id: updatedReservasi.counselorId,
+                            rejection_reason: updateStatusDto.rejectionReason,
+                        },
+                    });
+                    console.log(`✅ Notification sent: reservasi_rejected for student ${updatedReservasi.studentId}`);
+                }
+            }
+        }
+        catch (error) {
+            console.warn('Failed to create notification for reservasi status change:', error);
+        }
+        return updatedReservasi;
     }
     async delete(id) {
         const result = await this.reservasiRepository.delete(id);
@@ -300,14 +397,133 @@ let ReservasiService = class ReservasiService {
         reservasi.room = room;
         return await this.reservasiRepository.save(reservasi);
     }
+    async createPembinaanReservasi(dto) {
+        const pembinaan = await this.pembinaanRepository.findOne({
+            where: { id: dto.pembinaan_id },
+        });
+        if (!pembinaan) {
+            throw new common_1.BadRequestException(`Pembinaan with ID ${dto.pembinaan_id} not found`);
+        }
+        if (!pembinaan.siswas_id) {
+            throw new common_1.BadRequestException('Pembinaan does not have associated student');
+        }
+        if (!['ringan', 'berat'].includes(dto.pembinaanType)) {
+            throw new common_1.BadRequestException(`Invalid pembinaanType: ${dto.pembinaanType}. Must be 'ringan' or 'berat'`);
+        }
+        if (!dto.counselorId) {
+            throw new common_1.BadRequestException('counselorId is required');
+        }
+        const reservasi = this.reservasiRepository.create({
+            studentId: pembinaan.siswas_id,
+            counselorId: dto.counselorId,
+            preferredDate: dto.preferredDate,
+            preferredTime: dto.preferredTime,
+            type: dto.type || 'tatap-muka',
+            counselingType: 'khusus',
+            pembinaanType: dto.pembinaanType,
+            pembinaan_id: dto.pembinaan_id,
+            room: dto.room,
+            notes: dto.notes,
+            status: 'pending',
+        });
+        const savedReservasi = await this.reservasiRepository.save(reservasi);
+        try {
+            if (this.notificationService) {
+                await this.notificationService.create({
+                    recipient_id: dto.counselorId,
+                    type: 'reservasi_pembinaan_dibuat',
+                    title: 'Reservasi Pembinaan Dibuat',
+                    message: `Reservasi pembinaan telah dibuat. Tipe: ${dto.pembinaanType === 'ringan' ? 'Ringan (BK)' : 'Berat (WAKA)'}. Menunggu persetujuan.`,
+                    related_id: savedReservasi.id,
+                    related_type: 'reservasi',
+                    metadata: {
+                        student_id: savedReservasi.studentId,
+                        pembinaan_id: dto.pembinaan_id,
+                        pembinaan_type: dto.pembinaanType,
+                        preferred_date: dto.preferredDate,
+                    },
+                });
+                console.log(`✅ Notification sent: reservasi_pembinaan_dibuat for kesiswaan staff`);
+            }
+        }
+        catch (error) {
+            console.warn('Failed to create notification for pembinaan reservasi creation:', error);
+        }
+        if (dto.pembinaanType === 'berat') {
+            try {
+                const pembinaanWaka = this.pembinaanWakaRepository.create({
+                    reservasi_id: savedReservasi.id,
+                    pembinaan_id: dto.pembinaan_id,
+                    waka_id: dto.counselorId,
+                    status: 'pending',
+                    created_by: dto.counselorId,
+                });
+                await this.pembinaanWakaRepository.save(pembinaanWaka);
+            }
+            catch (error) {
+                console.warn('Failed to create PembinaanWaka for berat pembinaan:', error);
+            }
+        }
+        if (dto.pembinaanType === 'ringan') {
+            try {
+                await this.laporanBkService.create({
+                    reservasi_id: savedReservasi.id,
+                    pembinaan_id: dto.pembinaan_id,
+                    student_id: pembinaan.siswas_id,
+                    bk_id: dto.counselorId,
+                });
+            }
+            catch (error) {
+                console.warn('Failed to create LaporanBK for ringan pembinaan:', error);
+            }
+        }
+        try {
+            const conversationData = await this.chatService.getConversation(savedReservasi.studentId, pembinaan.siswas_id, 50);
+            savedReservasi.conversationId = conversationData.conversation.id;
+            await this.reservasiRepository.save(savedReservasi);
+        }
+        catch (error) {
+            console.warn('Failed to create conversation for pembinaan reservasi:', error);
+        }
+        return savedReservasi;
+    }
+    async findByCounselingType(counselingType) {
+        return this.reservasiRepository.find({
+            where: { counselingType: counselingType },
+            relations: ['student', 'counselor', 'pembinaan'],
+        });
+    }
+    async findByPembinaanId(pembinaan_id) {
+        return this.reservasiRepository.findOne({
+            where: { pembinaan_id },
+            relations: ['student', 'counselor', 'pembinaan'],
+        });
+    }
+    async findByPembinaanType(pembinaanType) {
+        return this.reservasiRepository.find({
+            where: {
+                pembinaanType,
+                counselingType: 'khusus'
+            },
+            relations: ['student', 'counselor', 'pembinaan'],
+        });
+    }
 };
 exports.ReservasiService = ReservasiService;
 exports.ReservasiService = ReservasiService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(reservasi_entity_1.Reservasi)),
     __param(1, (0, typeorm_1.InjectRepository)(counseling_category_entity_1.CounselingCategory)),
+    __param(2, (0, typeorm_1.InjectRepository)(pembinaan_entity_1.Pembinaan)),
+    __param(3, (0, typeorm_1.InjectRepository)(pembinaan_waka_entity_1.PembinaanWaka)),
+    __param(6, (0, common_1.Optional)()),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => notification_service_1.NotificationService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
-        chat_service_1.ChatService])
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        chat_service_1.ChatService,
+        laporan_bk_service_1.LaporanBkService,
+        notification_service_1.NotificationService])
 ], ReservasiService);
 //# sourceMappingURL=reservasi.service.js.map

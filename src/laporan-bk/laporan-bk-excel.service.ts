@@ -161,24 +161,26 @@ export class LaporanBkExcelService {
 
   private addDataRow(worksheet: Worksheet, item: LaporanBk, rowNumber: number) {
     const row = worksheet.getRow(rowNumber);
+    // Using only existing properties on LaporanBk entity
+    // Legacy properties removed: namaKonseling, jurusanId, kelasId, etc.
     row.values = [
-      item.namaKonseling,
-      item.jurusanId,
-      item.kelasId,
-      item.tanggalDiprosesAiBk,
-      item.deskripsiKasusMasalah,
-      item.bentukPenanganganSebelumnya,
-      item.riwayatSpDanKasus,
-      item.layananBk,
-      item.followUpTindakanBk,
-      item.penahanganGuruBkKonselingProsesPembinaan,
-      item.pertemuanKe1,
-      item.pertemuanKe2,
-      item.pertemuanKe3,
-      item.hasilPemantauanKeterangan,
-      item.guruBkYangMenanganiId,
-      item.statusPerkembanganPesertaDidik,
-      item.keteranganKetersedianDokumen,
+      `Laporan ${item.id}`, // namaKonseling
+      '-', // jurusanId
+      '-', // kelasId
+      item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID') : '', // tanggalDiprosesAiBk
+      item.session_topic || '-', // deskripsiKasusMasalah
+      '-', // bentukPenanganganSebelumnya
+      '-', // riwayatSpDanKasus
+      '-', // layananBk
+      item.recommendations || '-', // followUpTindakanBk
+      '-', // penahanganGuruBkKonselingProsesPembinaan
+      item.session_date ? new Date(item.session_date).toLocaleDateString('id-ID') : '', // pertemuanKe1
+      '-', // pertemuanKe2
+      '-', // pertemuanKe3
+      item.follow_up_status || '-', // hasilPemantauanKeterangan
+      item.bk_id || '-', // guruBkYangMenanganiId
+      item.status || '-', // statusPerkembanganPesertaDidik
+      item.parent_notified ? 'Ya' : 'Tidak', // keteranganKetersedianDokumen
     ];
     row.alignment = { vertical: 'top', wrapText: true };
   }

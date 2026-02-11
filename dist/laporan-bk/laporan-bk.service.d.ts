@@ -1,28 +1,44 @@
 import { Repository } from 'typeorm';
 import { LaporanBk } from './entities/laporan-bk.entity';
-import { CreateLaporanBkDto } from './dto/create-laporan-bk.dto';
-import { UpdateLaporanBkDto } from './dto/update-laporan-bk.dto';
-import { LaporanBkExcelService } from './laporan-bk-excel.service';
+import { Reservasi } from '../reservasi/entities/reservasi.entity';
+import { CreateLaporanBkDto, UpdateLaporanBkDto, RecordSessionDto, EscalateToBkDto } from './dto/create-laporan-bk.dto';
+import { NotificationService } from '../notifications/notification.service';
 export declare class LaporanBkService {
-    private readonly laporanBkRepo;
-    private readonly excelService;
-    constructor(laporanBkRepo: Repository<LaporanBk>, excelService: LaporanBkExcelService);
-    create(createLaporanBkDto: CreateLaporanBkDto): Promise<LaporanBk>;
+    private laporanBkRepository;
+    private reservasiRepository;
+    private notificationService?;
+    private readonly logger;
+    constructor(laporanBkRepository: Repository<LaporanBk>, reservasiRepository: Repository<Reservasi>, notificationService?: NotificationService | undefined);
+    create(dto: CreateLaporanBkDto): Promise<LaporanBk>;
     findAll(): Promise<LaporanBk[]>;
+    findByBk(bk_id: number): Promise<LaporanBk[]>;
+    findOngoing(): Promise<LaporanBk[]>;
+    findPendingFollowUp(): Promise<LaporanBk[]>;
     findOne(id: number): Promise<LaporanBk>;
-    update(id: number, updateLaporanBkDto: UpdateLaporanBkDto): Promise<LaporanBk>;
-    remove(id: number): Promise<LaporanBk>;
-    exportToExcel(): Promise<{
-        filePath: string;
-        fileName: string;
+    findByReservasiId(reservasi_id: number): Promise<LaporanBk | null>;
+    recordSession(id: number, dto: RecordSessionDto, bk_id: number): Promise<LaporanBk>;
+    markBehavioralImprovement(id: number, improved: boolean, bk_id: number): Promise<LaporanBk>;
+    notifyParent(id: number, notification_content: string, bk_id: number): Promise<LaporanBk>;
+    completeFollowUp(id: number, follow_up_status: string, bk_id: number): Promise<LaporanBk>;
+    escalateToWaka(id: number, dto: EscalateToBkDto, bk_id: number): Promise<LaporanBk>;
+    complete(id: number, final_assessment: string, bk_id: number): Promise<LaporanBk>;
+    update(id: number, dto: UpdateLaporanBkDto): Promise<LaporanBk>;
+    archive(id: number): Promise<LaporanBk>;
+    getBkStatistics(bk_id: number): Promise<{
+        totalLaporan: number;
+        ongoing: number;
+        completed: number;
+        escalated: number;
+        needsFollowUp: number;
+        totalSessions: number;
+        behavioralImprovement: number;
     }>;
-    generateTemplate(): Promise<{
-        filePath: string;
-        fileName: string;
-    }>;
-    importFromExcel(filePath: string): Promise<{
-        success: number;
-        failed: number;
-        errors: any[];
+    getOverallStatistics(): Promise<{
+        totalLaporan: number;
+        ongoing: number;
+        completed: number;
+        escalated: number;
+        avgSessionsPerLaporan: number;
+        parentNotificationRate: number;
     }>;
 }

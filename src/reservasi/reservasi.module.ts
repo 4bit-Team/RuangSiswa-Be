@@ -12,12 +12,19 @@ import { ChatModule } from '../chat/chat.module';
 import { UsersModule } from '../users/users.module';
 import { FeedbackService } from './feedback.service';
 import { User } from '../users/entities/user.entity';
+import { Pembinaan } from '../kesiswaan/pembinaan/entities/pembinaan.entity';
+import { PembinaanWaka } from '../kesiswaan/pembinaan-waka/entities/pembinaan-waka.entity';
+import { LaporanBk } from '../laporan-bk/entities/laporan-bk.entity';
+import { LaporanBkModule } from '../laporan-bk/laporan-bk.module';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Reservasi, GroupReservasi, Feedback, CounselingCategory, User]),
+    TypeOrmModule.forFeature([Reservasi, GroupReservasi, Feedback, CounselingCategory, User, Pembinaan, PembinaanWaka, LaporanBk]),
     ChatModule,
     UsersModule,
+    LaporanBkModule,
+    NotificationModule,
   ],
   providers: [ReservasiService, GroupReservasiService, FeedbackService],
   controllers: [ReservasiController, GroupReservasiController],

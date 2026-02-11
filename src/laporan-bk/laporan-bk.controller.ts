@@ -2,137 +2,195 @@ import {
   Controller,
   Get,
   Post,
-  Body,
   Patch,
+  Body,
   Param,
-  Delete,
-  UseInterceptors,
-  UploadedFile,
+  UseGuards,
+  Request,
   BadRequestException,
-  Res,
+  NotFoundException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import type { Response } from 'express';
-import * as fs from 'fs';
-import * as path from 'path';
 import { LaporanBkService } from './laporan-bk.service';
-import { CreateLaporanBkDto } from './dto/create-laporan-bk.dto';
-import { UpdateLaporanBkDto } from './dto/update-laporan-bk.dto';
+import {
+  CreateLaporanBkDto,
+  UpdateLaporanBkDto,
+  RecordSessionDto,
+  EscalateToBkDto,
+  CompleteFollowUpDto,
+} from './dto/create-laporan-bk.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('laporan-bk')
+@UseGuards(JwtAuthGuard)
 export class LaporanBkController {
   constructor(private readonly laporanBkService: LaporanBkService) {}
 
+  // Create laporan BK (auto-created when ringan reservasi is approved)
   @Post()
-  create(@Body() createLaporanBkDto: CreateLaporanBkDto) {
-    return this.laporanBkService.create(createLaporanBkDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk', 'admin')
+  async create(@Body() createDto: CreateLaporanBkDto) {
+    return await this.laporanBkService.create(createDto);
   }
 
+  // Get all laporan BK (admin only)
   @Get()
-  findAll() {
-    return this.laporanBkService.findAll();
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async findAll() {
+    return await this.laporanBkService.findAll();
   }
 
+  // Get laporan for current BK
+  @Get('my-laporan')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk')
+  async getMyLaporan(@Request() req) {
+    const bk_id = req.user.id;
+    return await this.laporanBkService.findByBk(bk_id);
+  }
+
+  // Get ongoing laporan
+  @Get('status/ongoing')
+  async getOngoing() {
+    return await this.laporanBkService.findOngoing();
+  }
+
+  // Get pending follow-up
+  @Get('follow-up/pending')
+  async getPendingFollowUp() {
+    return await this.laporanBkService.findPendingFollowUp();
+  }
+
+  // Get BK statistics
+  @Get('statistics/bk')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk', 'admin')
+  async getBkStatistics(@Request() req) {
+    const bk_id = req.user.id;
+    return await this.laporanBkService.getBkStatistics(bk_id);
+  }
+
+  // Get overall statistics (admin)
+  @Get('statistics/overall')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async getOverallStatistics() {
+    return await this.laporanBkService.getOverallStatistics();
+  }
+
+  // Get laporan by reservasi ID
+  @Get('by-reservasi/:reservasiId')
+  async getByReservasiId(@Param('reservasiId') reservasiId: string) {
+    const laporan = await this.laporanBkService.findByReservasiId(parseInt(reservasiId));
+    if (!laporan) {
+      throw new NotFoundException(`No laporan found for reservasi ID ${reservasiId}`);
+    }
+    return laporan;
+  }
+
+  // Get single laporan
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.laporanBkService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    return await this.laporanBkService.findOne(parseInt(id));
   }
 
+  // Record a counseling session
+  @Patch(':id/session')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk')
+  async recordSession(
+    @Param('id') id: string,
+    @Body() recordSessionDto: RecordSessionDto,
+    @Request() req,
+  ) {
+    const bk_id = req.user.id;
+    return await this.laporanBkService.recordSession(parseInt(id), recordSessionDto, bk_id);
+  }
+
+  // Mark behavioral improvement
+  @Patch(':id/behavioral-improvement')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk')
+  async markBehavioralImprovement(
+    @Param('id') id: string,
+    @Body() body: { improved: boolean },
+    @Request() req,
+  ) {
+    const bk_id = req.user.id;
+    return await this.laporanBkService.markBehavioralImprovement(parseInt(id), body.improved, bk_id);
+  }
+
+  // Notify parents
+  @Patch(':id/notify-parent')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk')
+  async notifyParent(
+    @Param('id') id: string,
+    @Body() body: { notification_content: string },
+    @Request() req,
+  ) {
+    const bk_id = req.user.id;
+    return await this.laporanBkService.notifyParent(parseInt(id), body.notification_content, bk_id);
+  }
+
+  // Complete follow-up
+  @Patch(':id/follow-up/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk')
+  async completeFollowUp(
+    @Param('id') id: string,
+    @Body() completeDto: CompleteFollowUpDto,
+    @Request() req,
+  ) {
+    const bk_id = req.user.id;
+    return await this.laporanBkService.completeFollowUp(parseInt(id), completeDto.follow_up_status, bk_id);
+  }
+
+  // Escalate to WAKA
+  @Patch(':id/escalate-to-waka')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk')
+  async escalateToWaka(
+    @Param('id') id: string,
+    @Body() escalateDto: EscalateToBkDto,
+    @Request() req,
+  ) {
+    const bk_id = req.user.id;
+    return await this.laporanBkService.escalateToWaka(parseInt(id), escalateDto, bk_id);
+  }
+
+  // Complete laporan
+  @Patch(':id/complete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk')
+  async complete(
+    @Param('id') id: string,
+    @Body() body: { final_assessment: string },
+    @Request() req,
+  ) {
+    const bk_id = req.user.id;
+    return await this.laporanBkService.complete(parseInt(id), body.final_assessment, bk_id);
+  }
+
+  // Update laporan
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLaporanBkDto: UpdateLaporanBkDto) {
-    return this.laporanBkService.update(+id, updateLaporanBkDto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk', 'admin')
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateLaporanBkDto,
+  ) {
+    return await this.laporanBkService.update(parseInt(id), updateDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.laporanBkService.remove(+id);
-  }
-
-  @Get('export/excel')
-  async exportExcel(@Res() res: Response) {
-    try {
-      const { filePath, fileName } = await this.laporanBkService.exportToExcel();
-
-      res.download(filePath, fileName, (err) => {
-        if (err) {
-          console.error('Error downloading file:', err);
-        }
-        // Optional: delete file after download
-        fs.unlink(filePath, (unlinkErr) => {
-          if (unlinkErr) console.error('Error deleting temp file:', unlinkErr);
-        });
-      });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  @Get('template/download')
-  async downloadTemplate(@Res() res: Response) {
-    try {
-      const { filePath, fileName } = await this.laporanBkService.generateTemplate();
-
-      res.download(filePath, fileName, (err) => {
-        if (err) {
-          console.error('Error downloading file:', err);
-        }
-        // Optional: delete file after download
-        fs.unlink(filePath, (unlinkErr) => {
-          if (unlinkErr) console.error('Error deleting temp file:', unlinkErr);
-        });
-      });
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  }
-
-  @Post('import/excel')
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = path.join(process.cwd(), 'src', '..', 'uploads', 'laporan');
-          if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
-          }
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, uniqueSuffix + '-' + file.originalname);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.mimetype.match(/application\/(vnd.openxmlformats-officedocument.spreadsheetml.sheet|vnd.ms-excel)$/)) {
-          cb(new BadRequestException('Only Excel files are allowed!'), false);
-        } else {
-          cb(null, true);
-        }
-      },
-    }),
-  )
-  async importExcel(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-
-    try {
-      const result = await this.laporanBkService.importFromExcel(file.path);
-
-      // Delete uploaded file after processing
-      fs.unlink(file.path, (err) => {
-        if (err) console.error('Error deleting temp file:', err);
-      });
-
-      return result;
-    } catch (error) {
-      // Delete uploaded file on error
-      fs.unlink(file.path, (err) => {
-        if (err) console.error('Error deleting temp file:', err);
-      });
-
-      throw error;
-    }
+  // Archive laporan
+  @Patch(':id/archive')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('bk', 'admin')
+  async archive(@Param('id') id: string) {
+    return await this.laporanBkService.archive(parseInt(id));
   }
 }

@@ -66,11 +66,11 @@ const statistics_module_1 = require("./statistics/statistics.module");
 const consultation_category_module_1 = require("./consultation-category/consultation-category.module");
 const counseling_category_module_1 = require("./counseling-category/counseling-category.module");
 const news_category_module_1 = require("./news-category/news-category.module");
-const bimbingan_module_1 = require("./kesiswaan/bimbingan/bimbingan.module");
-const attendance_module_1 = require("./kesiswaan/attendance/attendance.module");
-const violations_module_1 = require("./kesiswaan/violations/violations.module");
-const tardiness_module_1 = require("./kesiswaan/tardiness/tardiness.module");
+const point_pelanggaran_module_1 = require("./kesiswaan/point-pelanggaran/point-pelanggaran.module");
+const pembinaan_module_1 = require("./kesiswaan/pembinaan/pembinaan.module");
+const pembinaan_waka_module_1 = require("./kesiswaan/pembinaan-waka/pembinaan-waka.module");
 const walas_module_1 = require("./walas/walas.module");
+const notification_module_1 = require("./notifications/notification.module");
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 let AppModule = class AppModule {
@@ -116,6 +116,7 @@ exports.AppModule = AppModule = __decorate([
                     }
                 },
             }),
+            notification_module_1.NotificationModule,
             auth_module_1.AuthModule,
             student_card_module_1.StudentCardModule,
             users_module_1.UsersModule,
@@ -132,15 +133,14 @@ exports.AppModule = AppModule = __decorate([
             emoji_module_1.EmojiModule,
             toxic_filter_module_1.ToxicFilterModule,
             konsultasi_module_1.KonsultasiModule,
-            laporan_bk_module_1.LaporanBkModule,
             statistics_module_1.StatisticsModule,
             consultation_category_module_1.ConsultationCategoryModule,
             counseling_category_module_1.CounselingCategoryModule,
             news_category_module_1.NewsCategoryModule,
-            bimbingan_module_1.BimbinganModule,
-            attendance_module_1.AttendanceModule,
-            violations_module_1.ViolationsModule,
-            tardiness_module_1.TardinessModule,
+            point_pelanggaran_module_1.PointPelanggaranModule,
+            pembinaan_module_1.PembinaanModule,
+            pembinaan_waka_module_1.PembinaanWakaModule,
+            laporan_bk_module_1.LaporanBkModule,
             walas_module_1.WalasModule,
         ],
     })

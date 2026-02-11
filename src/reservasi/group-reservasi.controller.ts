@@ -112,4 +112,19 @@ export class GroupReservasiController {
 
     return await this.groupReservasiService.remove(parseInt(id));
   }
+
+  // ======================== SESSION INITIALIZATION ========================
+
+  // Initialize session resources (QR + Chat) 15 minutes before session
+  @Post(':id/initialize')
+  async initializeSessionResources(@Param('id') id: string, @Request() req) {
+    const groupReservasi = await this.groupReservasiService.findOne(parseInt(id));
+    
+    if (!groupReservasi) {
+      throw new NotFoundException('Group reservasi tidak ditemukan');
+    }
+
+    console.log(`Initializing session resources for group reservasi ${id}`);
+    return await this.groupReservasiService.initializeSessionResources(parseInt(id));
+  }
 }

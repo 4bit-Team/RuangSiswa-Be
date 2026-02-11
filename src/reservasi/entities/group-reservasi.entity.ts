@@ -1,6 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { CounselingCategory } from '../../counseling-category/entities/counseling-category.entity';
+import { ReservasiStatus } from '../enums/reservasi-status.enum';
+import { SessionType } from '../enums/session-type.enum';
 
 @Entity('group_reservasi')
 export class GroupReservasi {
@@ -39,8 +41,8 @@ export class GroupReservasi {
   @Column()
   preferredTime: string; // Format: HH:MM
 
-  @Column({ default: 'chat' })
-  type: 'chat' | 'tatap-muka';
+  @Column({ enum: SessionType, default: SessionType.CHAT })
+  type: SessionType;
 
   @ManyToOne(() => CounselingCategory, { eager: true })
   @JoinColumn({ name: 'topicId' })
@@ -52,8 +54,8 @@ export class GroupReservasi {
   @Column({ nullable: true })
   notes: string;
 
-  @Column({ default: 'pending' })
-  status: 'pending' | 'approved' | 'rejected' | 'in_counseling' | 'completed' | 'cancelled';
+  @Column({ enum: ReservasiStatus, default: ReservasiStatus.PENDING })
+  status: ReservasiStatus;
 
   @Column({ nullable: true })
   conversationId: number;
@@ -67,11 +69,17 @@ export class GroupReservasi {
   @Column({ nullable: true })
   qrCode: string;
 
+  @Column({ nullable: true })
+  qrGeneratedAt: Date; // Waktu QR di-generate (15 menit sebelum sesi)
+
   @Column({ default: false })
   attendanceConfirmed: boolean;
 
   @Column({ nullable: true })
   completedAt: Date;
+
+  @Column({ nullable: true })
+  chatInitializedAt: Date; // Waktu chat di-initialize (15 menit sebelum sesi)
 
   @CreateDateColumn()
   createdAt: Date;

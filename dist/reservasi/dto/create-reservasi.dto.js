@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateReservasiStatusDto = exports.CreateReservasiDto = void 0;
+exports.UpdateReservasiStatusDto = exports.CreatePembinaanReservasiDto = exports.CreateReservasiDto = void 0;
 const class_validator_1 = require("class-validator");
 class CreateReservasiDto {
     studentId;
@@ -17,6 +17,7 @@ class CreateReservasiDto {
     preferredDate;
     preferredTime;
     type;
+    counselingType;
     topicId;
     notes;
     room;
@@ -44,6 +45,11 @@ __decorate([
 ], CreateReservasiDto.prototype, "type", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(['umum', 'kelompok', 'khusus']),
+    __metadata("design:type", String)
+], CreateReservasiDto.prototype, "counselingType", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], CreateReservasiDto.prototype, "topicId", void 0);
@@ -57,6 +63,51 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateReservasiDto.prototype, "room", void 0);
+class CreatePembinaanReservasiDto {
+    pembinaan_id;
+    counselorId;
+    pembinaanType;
+    preferredDate;
+    preferredTime;
+    type;
+    notes;
+    room;
+}
+exports.CreatePembinaanReservasiDto = CreatePembinaanReservasiDto;
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreatePembinaanReservasiDto.prototype, "pembinaan_id", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreatePembinaanReservasiDto.prototype, "counselorId", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(['ringan', 'berat']),
+    __metadata("design:type", String)
+], CreatePembinaanReservasiDto.prototype, "pembinaanType", void 0);
+__decorate([
+    (0, class_validator_1.IsDate)(),
+    __metadata("design:type", Date)
+], CreatePembinaanReservasiDto.prototype, "preferredDate", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreatePembinaanReservasiDto.prototype, "preferredTime", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(['chat', 'tatap-muka']),
+    __metadata("design:type", String)
+], CreatePembinaanReservasiDto.prototype, "type", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreatePembinaanReservasiDto.prototype, "notes", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreatePembinaanReservasiDto.prototype, "room", void 0);
 class UpdateReservasiStatusDto {
     status;
     rejectionReason;

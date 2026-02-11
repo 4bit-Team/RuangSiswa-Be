@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { HttpLoggingInterceptor } from './logger/http-logging.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -12,6 +13,9 @@ async function bootstrap() {
 
   const ioAdapter = new IoAdapter(app);
   app.useWebSocketAdapter(ioAdapter);
+
+  // Register global HTTP logging interceptor
+  app.useGlobalInterceptors(new HttpLoggingInterceptor());
 
   app.setGlobalPrefix('api');
 
@@ -45,5 +49,7 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`🚀 Server running on port ${port}`);
   console.log(`🌐 Global API prefix: /api`);
+  console.log(`📋 📨 HTTP Logging Interceptor: ENABLED`);
+  console.log(`✅ All routes available at: http://localhost:${port}/api/*`);
 }
 bootstrap();

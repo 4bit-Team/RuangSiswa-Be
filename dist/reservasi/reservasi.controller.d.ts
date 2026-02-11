@@ -1,5 +1,5 @@
 import { ReservasiService } from './reservasi.service';
-import { CreateReservasiDto, UpdateReservasiStatusDto } from './dto/create-reservasi.dto';
+import { CreateReservasiDto, UpdateReservasiStatusDto, CreatePembinaanReservasiDto } from './dto/create-reservasi.dto';
 import { FeedbackService } from './feedback.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
 export declare class ReservasiController {
@@ -7,6 +7,10 @@ export declare class ReservasiController {
     private readonly feedbackService;
     constructor(reservasiService: ReservasiService, feedbackService: FeedbackService);
     create(createReservasiDto: CreateReservasiDto, req: any): Promise<import("./entities/reservasi.entity").Reservasi>;
+    createPembinaanReservasi(createPembinaanDto: CreatePembinaanReservasiDto, req: any): Promise<import("./entities/reservasi.entity").Reservasi>;
+    getByCounselingType(type: string, req: any): Promise<import("./entities/reservasi.entity").Reservasi[]>;
+    getByPembinaanId(pembinaanId: string): Promise<import("./entities/reservasi.entity").Reservasi | null>;
+    getByPembinaanType(type: string, req: any): Promise<import("./entities/reservasi.entity").Reservasi[]>;
     findAll(studentId?: string, counselorId?: string, status?: string): Promise<import("./entities/reservasi.entity").Reservasi[]>;
     getMyReservations(req: any): Promise<import("./entities/reservasi.entity").Reservasi[]>;
     getByStudentId(studentId: string): Promise<import("./entities/reservasi.entity").Reservasi[]>;

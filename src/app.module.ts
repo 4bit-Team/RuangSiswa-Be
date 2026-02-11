@@ -24,11 +24,15 @@ import { StatisticsModule } from './statistics/statistics.module';
 import { ConsultationCategoryModule } from './consultation-category/consultation-category.module';
 import { CounselingCategoryModule } from './counseling-category/counseling-category.module';
 import { NewsCategoryModule } from './news-category/news-category.module';
-import { BimbinganModule } from './kesiswaan/bimbingan/bimbingan.module';
-import { AttendanceModule } from './kesiswaan/attendance/attendance.module';
-import { ViolationsModule } from './kesiswaan/violations/violations.module';
-import { TardinessModule } from './kesiswaan/tardiness/tardiness.module';
+// import { BimbinganModule } from './kesiswaan-backup/bimbingan/bimbingan.module';
+// import { AttendanceModule } from './kesiswaan-backup/attendance/attendance.module';
+// import { ViolationsModule } from './kesiswaan-backup/violations/violations.module';
+// import { TardinessModule } from './kesiswaan-backup/tardiness/tardiness.module';
+import { PointPelanggaranModule } from './kesiswaan/point-pelanggaran/point-pelanggaran.module';
+import { PembinaanModule } from './kesiswaan/pembinaan/pembinaan.module';
+import { PembinaanWakaModule } from './kesiswaan/pembinaan-waka/pembinaan-waka.module';
 import { WalasModule } from './walas/walas.module';
+import { NotificationModule } from './notifications/notification.module';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -74,6 +78,9 @@ import * as path from 'path';
       },
     }),
 
+    // Notification & Real-time Modules (must be loaded first - used by many modules)
+    NotificationModule,
+
     // Core Modules
     AuthModule,
     StudentCardModule,
@@ -91,17 +98,20 @@ import * as path from 'path';
     EmojiModule,
     ToxicFilterModule,
     KonsultasiModule,
-    LaporanBkModule,
     StatisticsModule,
     ConsultationCategoryModule,
     CounselingCategoryModule,
     NewsCategoryModule,
 
     // Kesiswaan Modules
-    BimbinganModule,
-    AttendanceModule,
-    ViolationsModule,
-    TardinessModule,
+    // BimbinganModule,
+    // AttendanceModule,
+    // ViolationsModule,
+    // TardinessModule,
+    PointPelanggaranModule,
+    PembinaanModule,
+    PembinaanWakaModule,
+    LaporanBkModule,
 
     // External Integration Modules
     WalasModule,

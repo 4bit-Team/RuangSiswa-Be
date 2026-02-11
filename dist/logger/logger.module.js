@@ -10,12 +10,13 @@ exports.LoggerModule = void 0;
 const common_1 = require("@nestjs/common");
 const logger_controller_1 = require("./logger.controller");
 const logger_service_1 = require("./logger.service");
+const diagnostics_controller_1 = require("./diagnostics.controller");
 let LoggerModule = class LoggerModule {
 };
 exports.LoggerModule = LoggerModule;
 exports.LoggerModule = LoggerModule = __decorate([
     (0, common_1.Module)({
-        controllers: [logger_controller_1.LoggerController],
+        controllers: [logger_controller_1.LoggerController, diagnostics_controller_1.DiagnosticsController],
         providers: [logger_service_1.LoggerService],
     })
 ], LoggerModule);

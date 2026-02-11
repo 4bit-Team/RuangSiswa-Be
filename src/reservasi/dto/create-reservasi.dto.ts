@@ -17,6 +17,10 @@ export class CreateReservasiDto {
   type: 'chat' | 'tatap-muka';
 
   @IsOptional()
+  @IsEnum(['umum', 'kelompok', 'khusus'])
+  counselingType?: 'umum' | 'kelompok' | 'khusus'; // Default: 'umum'
+
+  @IsOptional()
   @IsNumber()
   topicId?: number;
 
@@ -27,6 +31,38 @@ export class CreateReservasiDto {
   @IsOptional()
   @IsString()
   room?: string;
+}
+
+/**
+ * DTO untuk create Reservasi dengan tipe Pembinaan (Konseling Khusus)
+ * Digunakan saat pembina siswa mengirim data pembinaan ke BK
+ */
+export class CreatePembinaanReservasiDto {
+  @IsNumber()
+  pembinaan_id: number; // Reference ke Pembinaan record
+
+  @IsNumber()
+  counselorId: number; // BK Counselor yang ditugaskan
+
+  @IsEnum(['ringan', 'berat'])
+  pembinaanType: 'ringan' | 'berat'; // Tipe pembinaan (ringan=BK handle, berat=WAKA handle)
+
+  @IsDate()
+  preferredDate: Date; // Jadwal pertemuan pembinaan
+
+  @IsString()
+  preferredTime: string; // Format: HH:MM
+
+  @IsEnum(['chat', 'tatap-muka'])
+  type: 'chat' | 'tatap-muka'; // Tipe sesi
+
+  @IsOptional()
+  @IsString()
+  notes?: string; // Catatan pembina untuk BK
+
+  @IsOptional()
+  @IsString()
+  room?: string; // Ruang tatap muka jika ada
 }
 
 export class UpdateReservasiStatusDto {

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { BkSchedule, DaySchedule } from './entities/bk-schedule.entity';
 import { CreateBkScheduleDto, UpdateBkScheduleDto } from './dto/create-bk-schedule.dto';
 import { Reservasi } from '../reservasi/entities/reservasi.entity';
+import { ReservasiStatus } from '../reservasi/enums/reservasi-status.enum';
 import { User } from '../users/entities/user.entity';
 
 @Injectable()
@@ -173,7 +174,7 @@ export class BkScheduleService {
         counselorId: bkId,
         preferredDate: date,
         preferredTime: time,
-        status: 'approved', // Hanya count approved reservasi
+        status: ReservasiStatus.APPROVED, // Hanya count approved reservasi
       },
     });
 

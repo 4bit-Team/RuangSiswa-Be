@@ -12,15 +12,17 @@ const typeorm_1 = require("@nestjs/typeorm");
 const laporan_bk_service_1 = require("./laporan-bk.service");
 const laporan_bk_controller_1 = require("./laporan-bk.controller");
 const laporan_bk_entity_1 = require("./entities/laporan-bk.entity");
-const laporan_bk_excel_service_1 = require("./laporan-bk-excel.service");
+const reservasi_entity_1 = require("../reservasi/entities/reservasi.entity");
+const notification_module_1 = require("../notifications/notification.module");
 let LaporanBkModule = class LaporanBkModule {
 };
 exports.LaporanBkModule = LaporanBkModule;
 exports.LaporanBkModule = LaporanBkModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([laporan_bk_entity_1.LaporanBk])],
+        imports: [typeorm_1.TypeOrmModule.forFeature([laporan_bk_entity_1.LaporanBk, reservasi_entity_1.Reservasi]), notification_module_1.NotificationModule],
         controllers: [laporan_bk_controller_1.LaporanBkController],
-        providers: [laporan_bk_service_1.LaporanBkService, laporan_bk_excel_service_1.LaporanBkExcelService],
+        providers: [laporan_bk_service_1.LaporanBkService],
+        exports: [laporan_bk_service_1.LaporanBkService],
     })
 ], LaporanBkModule);
 //# sourceMappingURL=laporan-bk.module.js.map

@@ -1,10 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Reservasi } from './entities/reservasi.entity';
-import { CreateReservasiDto, UpdateReservasiStatusDto } from './dto/create-reservasi.dto';
+import { CreateReservasiDto, UpdateReservasiStatusDto, CreatePembinaanReservasiDto } from './dto/create-reservasi.dto';
 import { CounselingCategory } from '../counseling-category/entities/counseling-category.entity';
 import { ChatService } from '../chat/chat.service';
+import { Pembinaan } from '../kesiswaan/pembinaan/entities/pembinaan.entity';
+import { PembinaanWaka } from '../kesiswaan/pembinaan-waka/entities/pembinaan-waka.entity';
+import { LaporanBkService } from '../laporan-bk/laporan-bk.service';
+import { NotificationService } from '../notifications/notification.service';
 import * as QRCode from 'qrcode';
 
 @Injectable()
@@ -14,7 +18,15 @@ export class ReservasiService {
     private reservasiRepository: Repository<Reservasi>,
     @InjectRepository(CounselingCategory)
     private categoryRepository: Repository<CounselingCategory>,
+    @InjectRepository(Pembinaan)
+    private pembinaanRepository: Repository<Pembinaan>,
+    @InjectRepository(PembinaanWaka)
+    private pembinaanWakaRepository: Repository<PembinaanWaka>,
     private chatService: ChatService,
+    private laporanBkService: LaporanBkService,
+    @Optional()
+    @Inject(forwardRef(() => NotificationService))
+    private notificationService?: NotificationService,
   ) {}
 
   // Create reservasi baru
@@ -160,6 +172,33 @@ export class ReservasiService {
           });
           reservasi.qrCode = await QRCode.toDataURL(qrData);
         }
+
+        // Auto-create LaporanBK if this is a 'ringan' pembinaan reservasi
+        if (reservasi.counselingType === 'khusus' && reservasi.pembinaanType === 'ringan') {
+          try {
+            // Load full reservasi with relationships
+            const fullReservasi = await this.reservasiRepository.findOne({
+              where: { id: reservasi.id },
+              relations: ['student', 'pembinaan'],
+            });
+
+            if (fullReservasi && fullReservasi.pembinaan) {
+              const laporanBkDto = {
+                reservasi_id: fullReservasi.id,
+                pembinaan_id: fullReservasi.pembinaan_id,
+                student_id: fullReservasi.studentId,
+                bk_id: fullReservasi.counselorId,
+              };
+
+              // Create LaporanBK via service
+              await this.laporanBkService.create(laporanBkDto);
+              console.log(`✅ Auto-created LaporanBK for ringan reservasi ${fullReservasi.id}`);
+            }
+          } catch (error) {
+            console.warn('Failed to auto-create LaporanBK for ringan reservasi:', error);
+            // Don't fail the whole operation if LaporanBK creation fails
+          }
+        }
       } catch (error) {
         console.error('Error creating conversation or QR:', error);
         throw new Error('Failed to create chat conversation or generate QR');
@@ -171,7 +210,80 @@ export class ReservasiService {
       reservasi.rejectionReason = updateStatusDto.rejectionReason;
     }
 
-    return await this.reservasiRepository.save(reservasi);
+    const updatedReservasi = await this.reservasiRepository.save(reservasi);
+
+    // Create and send notifications based on status change
+    try {
+      if (updateStatusDto.status === 'approved') {
+        // Check if this is a pembinaan type reservasi
+        if (updatedReservasi.counselingType === 'khusus' && updatedReservasi.pembinaanType) {
+          // Notification for kesiswaan: pembinaan_disetujui
+          // TODO: Map to actual kesiswaan staff who created the reservasi
+          // For now: Send notification to the counselor (BK/WAKA) who approved it
+          // In future: Should identify who from Kesiswaan created this reservasi
+          if (this.notificationService) {
+            await this.notificationService.create({
+              recipient_id: updatedReservasi.counselorId,
+              type: 'pembinaan_disetujui',
+              title: 'Pembinaan Disetujui',
+              message: `Pembinaan untuk siswa dari reservasi ID ${updatedReservasi.id} telah disetujui oleh ${updatedReservasi.pembinaanType === 'ringan' ? 'BK' : 'WAKA'}. Siap untuk dimulai pada ${new Date(updatedReservasi.preferredDate).toLocaleDateString('id-ID')}.`,
+              related_id: updatedReservasi.id,
+              related_type: 'reservasi',
+              metadata: {
+                student_id: updatedReservasi.studentId,
+                pembinaan_type: updatedReservasi.pembinaanType,
+                preferred_date: updatedReservasi.preferredDate,
+                approved_by: updatedReservasi.counselorId,
+              },
+            });
+            console.log(`✅ Notification sent: pembinaan_disetujui for kesiswaan`);
+          }
+        } else {
+          // Regular reservasi approved notification
+          if (this.notificationService) {
+            await this.notificationService.create({
+              recipient_id: updatedReservasi.studentId,
+              type: 'reservasi_approved',
+              title: 'Reservasi Disetujui',
+              message: `Reservasi konseling ${updatedReservasi.type || 'Anda'} telah disetujui. Silakan cek jadwal sesi Anda.`,
+              related_id: updatedReservasi.id,
+              related_type: 'reservasi',
+              metadata: {
+                student_id: updatedReservasi.studentId,
+                counselor_id: updatedReservasi.counselorId,
+                reservasi_type: updatedReservasi.type,
+                preferred_date: updatedReservasi.preferredDate,
+              },
+            });
+            console.log(`✅ Notification sent: reservasi_approved for student ${updatedReservasi.studentId}`);
+          }
+        }
+      } else if (updateStatusDto.status === 'rejected') {
+        // Notification for rejection
+        if (this.notificationService) {
+          await this.notificationService.create({
+            recipient_id: updatedReservasi.studentId,
+            type: 'reservasi_rejected',
+            title: 'Reservasi Ditolak',
+            message: `Reservasi konseling Anda ditolak oleh konselor. ${updateStatusDto.rejectionReason ? `Alasan: ${updateStatusDto.rejectionReason}` : ''}`,
+            related_id: updatedReservasi.id,
+            related_type: 'reservasi',
+            metadata: {
+              student_id: updatedReservasi.studentId,
+              counselor_id: updatedReservasi.counselorId,
+              rejection_reason: updateStatusDto.rejectionReason,
+            },
+          });
+
+          console.log(`✅ Notification sent: reservasi_rejected for student ${updatedReservasi.studentId}`);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to create notification for reservasi status change:', error);
+      // Don't fail the whole operation if notification fails
+    }
+
+    return updatedReservasi;
   }
 
   // Delete reservasi
@@ -359,5 +471,150 @@ export class ReservasiService {
 
     reservasi.room = room;
     return await this.reservasiRepository.save(reservasi);
+  }
+
+  // Create reservasi khusus untuk pembinaan (dari PembinaanPage action ringan/berat)
+  async createPembinaanReservasi(dto: CreatePembinaanReservasiDto): Promise<Reservasi> {
+    // Validasi pembinaan exists
+    const pembinaan = await this.pembinaanRepository.findOne({
+      where: { id: dto.pembinaan_id },
+    });
+
+    if (!pembinaan) {
+      throw new BadRequestException(`Pembinaan with ID ${dto.pembinaan_id} not found`);
+    }
+
+    if (!pembinaan.siswas_id) {
+      throw new BadRequestException('Pembinaan does not have associated student');
+    }
+
+    // Validasi pembinaanType
+    if (!['ringan', 'berat'].includes(dto.pembinaanType)) {
+      throw new BadRequestException(`Invalid pembinaanType: ${dto.pembinaanType}. Must be 'ringan' or 'berat'`);
+    }
+
+    // Validasi counselor ID exists (akan di-handle di controller via guards/validation)
+    // Tapi untuk sekarang, kami cukup pastikan tidak null
+    if (!dto.counselorId) {
+      throw new BadRequestException('counselorId is required');
+    }
+
+    // Create reservasi dengan counselingType='khusus' dan pembinaanType dari parameter
+    const reservasi = this.reservasiRepository.create({
+      studentId: pembinaan.siswas_id,
+      counselorId: dto.counselorId,
+      preferredDate: dto.preferredDate,
+      preferredTime: dto.preferredTime,
+      type: dto.type || 'tatap-muka', // Default to tatap-muka untuk pembinaan
+      counselingType: 'khusus', // Always 'khusus' for pembinaan
+      pembinaanType: dto.pembinaanType as 'ringan' | 'berat',
+      pembinaan_id: dto.pembinaan_id,
+      room: dto.room,
+      notes: dto.notes,
+      status: 'pending', // Start with pending, BK/WAKA will approve
+    });
+
+    const savedReservasi = await this.reservasiRepository.save(reservasi);
+
+    // Send notification to Kesiswaan staff that pembinaan reservasi has been created
+    try {
+      // TODO: Map counselorId to actual kesiswaan staff user
+      // For now, send to counselorId (who requested the guidance)
+      if (this.notificationService) {
+        await this.notificationService.create({
+          recipient_id: dto.counselorId,
+          type: 'reservasi_pembinaan_dibuat',
+          title: 'Reservasi Pembinaan Dibuat',
+          message: `Reservasi pembinaan telah dibuat. Tipe: ${dto.pembinaanType === 'ringan' ? 'Ringan (BK)' : 'Berat (WAKA)'}. Menunggu persetujuan.`,
+          related_id: savedReservasi.id,
+          related_type: 'reservasi',
+          metadata: {
+            student_id: savedReservasi.studentId,
+            pembinaan_id: dto.pembinaan_id,
+            pembinaan_type: dto.pembinaanType,
+            preferred_date: dto.preferredDate,
+          },
+        });
+        console.log(`✅ Notification sent: reservasi_pembinaan_dibuat for kesiswaan staff`);
+      }
+    } catch (error) {
+      console.warn('Failed to create notification for pembinaan reservasi creation:', error);
+    }
+
+    // Create bimbingan pembina record if type is 'berat' (untuk WAKA decision)
+    if (dto.pembinaanType === 'berat') {
+      try {
+        const pembinaanWaka = this.pembinaanWakaRepository.create({
+          reservasi_id: savedReservasi.id,
+          pembinaan_id: dto.pembinaan_id,
+          waka_id: dto.counselorId, // WAKA is the counselor for 'berat' type
+          status: 'pending',
+          created_by: dto.counselorId,
+        });
+        await this.pembinaanWakaRepository.save(pembinaanWaka);
+      } catch (error) {
+        console.warn('Failed to create PembinaanWaka for berat pembinaan:', error);
+        // Don't fail the whole operation if PembinaanWaka creation fails
+      }
+    }
+
+    // Create laporan BK record if type is 'ringan' (untuk BK tracking session coaching)
+    if (dto.pembinaanType === 'ringan') {
+      try {
+        await this.laporanBkService.create({
+          reservasi_id: savedReservasi.id,
+          pembinaan_id: dto.pembinaan_id,
+          student_id: pembinaan.siswas_id,
+          bk_id: dto.counselorId, // BK is the counselor for 'ringan' type
+        });
+      } catch (error) {
+        console.warn('Failed to create LaporanBK for ringan pembinaan:', error);
+        // Don't fail the whole operation if LaporanBK creation fails
+      }
+    }
+
+    // Create conversation untuk komunikasi BK/WAKA-Student
+    try {
+      const conversationData = await this.chatService.getConversation(
+        savedReservasi.studentId,
+        pembinaan.siswas_id,
+        50,
+      );
+
+      savedReservasi.conversationId = conversationData.conversation.id;
+      await this.reservasiRepository.save(savedReservasi);
+    } catch (error) {
+      console.warn('Failed to create conversation for pembinaan reservasi:', error);
+      // Don't fail the whole operation if conversation creation fails
+    }
+
+    return savedReservasi;
+  }
+
+  // Find reservasi by counselingType (umum/kelompok/khusus)
+  async findByCounselingType(counselingType: string): Promise<Reservasi[]> {
+    return this.reservasiRepository.find({
+      where: { counselingType: counselingType as any },
+      relations: ['student', 'counselor', 'pembinaan'],
+    });
+  }
+
+  // Find reservasi by pembinaanId (untuk tracking status pembinaan)
+  async findByPembinaanId(pembinaan_id: number): Promise<Reservasi | null> {
+    return this.reservasiRepository.findOne({
+      where: { pembinaan_id },
+      relations: ['student', 'counselor', 'pembinaan'],
+    });
+  }
+
+  // Find reservasi by pembinaanType (ringan/berat) for BK/WAKA dashboards
+  async findByPembinaanType(pembinaanType: 'ringan' | 'berat'): Promise<Reservasi[]> {
+    return this.reservasiRepository.find({
+      where: { 
+        pembinaanType,
+        counselingType: 'khusus' // Only pembinaan reservasi
+      },
+      relations: ['student', 'counselor', 'pembinaan'],
+    });
   }
 }

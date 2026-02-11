@@ -5,6 +5,10 @@ import { GroupReservasi } from './entities/group-reservasi.entity';
 import { CreateGroupReservasiDto, UpdateGroupReservasiStatusDto } from './dto/create-group-reservasi.dto';
 import { CounselingCategory } from '../counseling-category/entities/counseling-category.entity';
 import { User } from '../users/entities/user.entity';
+import { ReservasiStatus } from './enums/reservasi-status.enum';
+import { SessionType } from './enums/session-type.enum';
+import { ChatService } from '../chat/chat.service';
+import * as QRCode from 'qrcode';
 
 @Injectable()
 export class GroupReservasiService {
@@ -15,6 +19,7 @@ export class GroupReservasiService {
     private categoryRepository: Repository<CounselingCategory>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private chatService: ChatService,
   ) {}
 
   // Create group reservasi baru
@@ -58,7 +63,7 @@ export class GroupReservasiService {
       topicId: createGroupReservasiDto.topicId,
       notes: createGroupReservasiDto.notes,
       room: createGroupReservasiDto.room,
-      status: 'pending',
+      status: ReservasiStatus.PENDING,
       ...(topic && { topic }),
     });
 
@@ -151,8 +156,8 @@ export class GroupReservasiService {
       .leftJoinAndSelect('groupReservasi.counselor', 'counselor')
       .leftJoinAndSelect('groupReservasi.students', 'students')
       .leftJoinAndSelect('groupReservasi.topic', 'topic')
-      .where('groupReservasi.counselorId = :counselorId', { counselorId })
-      .andWhere('groupReservasi.status = :status', { status: 'pending' })
+      .where('groupReservasi.counselorId = :counselorId', { counselorId: counselorId })
+      .andWhere('groupReservasi.status = :status', { status: ReservasiStatus.PENDING })
       .orderBy('groupReservasi.createdAt', 'DESC')
       .getMany();
   }
@@ -167,10 +172,96 @@ export class GroupReservasiService {
     if (!groupReservasi) {
       throw new NotFoundException('Group reservasi tidak ditemukan');
     }
+// Jika status berubah ke 'approved'
+    if (updateStatusDto.status === ReservasiStatus.APPROVED && groupReservasi.status === ReservasiStatus.PENDING) {
+      try {
+        // Untuk tatap-muka: Auto-assign room
+        if (groupReservasi.type === SessionType.TATAP_MUKA) {
+          const roomCount = await this.groupReservasiRepository.count({
+            where: { type: SessionType.TATAP_MUKA, status: ReservasiStatus.APPROVED }
+          });
+          groupReservasi.room = `BK-${(roomCount % 3) + 1}`;
+        }
+
+        // Catatan: QR dan Chat akan di-generate 15 menit sebelum sesi
+        // Lihat method initializeSessionResources()
+      } catch (error) {
+        console.error('Error during approval:', error);
+        throw new Error('Failed to process group reservasi approval');
+      }
+    }
 
     groupReservasi.status = updateStatusDto.status;
     if (updateStatusDto.rejectionReason) {
       groupReservasi.rejectionReason = updateStatusDto.rejectionReason;
+    }
+
+    return await this.groupReservasiRepository.save(groupReservasi);
+  }
+
+  // Method untuk generate QR dan create chat 15 menit sebelum sesi
+  async initializeSessionResources(id: number) {
+    const groupReservasi = await this.findOne(id);
+    if (!groupReservasi) {
+      throw new Error('Group Reservasi not found');
+    }
+
+    // Hanya untuk group reservasi yang approved
+    if (groupReservasi.status !== ReservasiStatus.APPROVED) {
+      throw new Error('Group Reservasi must be approved before initializing session resources');
+    }
+
+    // Hitung waktu 15 menit sebelum sesi
+    const [hours, minutes] = groupReservasi.preferredTime.split(':').map(Number);
+    const sessionStart = new Date(groupReservasi.preferredDate);
+    sessionStart.setHours(hours, minutes, 0);
+    
+    const fifteenMinutesBefore = new Date(sessionStart.getTime() - 15 * 60 * 1000);
+    const now = new Date();
+
+    // Validasi bahwa sudah waktunya generate QR / create chat (15 menit sebelum atau lebih)
+    if (now < fifteenMinutesBefore) {
+      throw new Error('Session resources cannot be initialized yet. Please try again 15 minutes before the session.');
+    }
+
+    // Generate QR untuk tatap muka
+    if (groupReservasi.type === SessionType.TATAP_MUKA && !groupReservasi.qrCode) {
+      const qrData = JSON.stringify({
+        reservasiId: groupReservasi.id,
+        counselorId: groupReservasi.counselorId,
+        timestamp: new Date().toISOString(),
+        isGroup: true,
+      });
+      groupReservasi.qrCode = await QRCode.toDataURL(qrData);
+      groupReservasi.qrGeneratedAt = new Date();
+      console.log(`✅ QR Code generated for group reservasi ${id}`);
+    }
+
+    // Create conversation untuk chat dan tatap muka (conversation for counselor + first student)
+    if (!groupReservasi.conversationId && groupReservasi.students && groupReservasi.students.length > 0) {
+      try {
+        const topicName = typeof groupReservasi.topic === 'object' ? groupReservasi.topic?.name : groupReservasi.topic;
+        // Create conversation using first student in group
+        const conversation = await this.chatService.getOrCreateConversation(
+          groupReservasi.counselorId,
+          groupReservasi.students[0].id,
+          `Sesi Kelompok ${groupReservasi.type}: ${topicName || 'Konseling'}`,
+        );
+
+        groupReservasi.conversationId = conversation.id;
+        groupReservasi.chatInitializedAt = new Date();
+
+        // Reset conversation status ke 'active' jika sebelumnya 'completed'
+        if (conversation.status === 'completed') {
+          await this.chatService.updateConversationStatus(conversation.id, 'active');
+          console.log(`✅ Reset conversation ${conversation.id} status dari 'completed' ke 'active'`);
+        }
+
+        console.log(`✅ Chat conversation created/initialized for group reservasi ${id}`);
+      } catch (error) {
+        console.error('Error creating conversation:', error);
+        throw new Error('Failed to create chat conversation');
+      }
     }
 
     return await this.groupReservasiRepository.save(groupReservasi);

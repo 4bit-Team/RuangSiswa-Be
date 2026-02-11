@@ -1,5 +1,7 @@
 import { User } from '../../users/entities/user.entity';
 import { CounselingCategory } from '../../counseling-category/entities/counseling-category.entity';
+import { ReservasiStatus } from '../enums/reservasi-status.enum';
+import { SessionType } from '../enums/session-type.enum';
 export declare class GroupReservasi {
     id: number;
     groupName: string;
@@ -10,17 +12,19 @@ export declare class GroupReservasi {
     counselor: User;
     preferredDate: Date;
     preferredTime: string;
-    type: 'chat' | 'tatap-muka';
+    type: SessionType;
     topic: CounselingCategory;
     topicId: number;
     notes: string;
-    status: 'pending' | 'approved' | 'rejected' | 'in_counseling' | 'completed' | 'cancelled';
+    status: ReservasiStatus;
     conversationId: number;
     rejectionReason: string;
     room: string;
     qrCode: string;
+    qrGeneratedAt: Date;
     attendanceConfirmed: boolean;
     completedAt: Date;
+    chatInitializedAt: Date;
     createdAt: Date;
     updatedAt: Date;
 }

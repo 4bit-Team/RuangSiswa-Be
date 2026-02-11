@@ -32,6 +32,25 @@ let ReservasiController = class ReservasiController {
         console.log('Creating reservasi:', createReservasiDto);
         return await this.reservasiService.create(createReservasiDto);
     }
+    async createPembinaanReservasi(createPembinaanDto, req) {
+        console.log('Creating pembinaan reservasi:', createPembinaanDto);
+        return await this.reservasiService.createPembinaanReservasi(createPembinaanDto);
+    }
+    async getByCounselingType(type, req) {
+        if (!['umum', 'kelompok', 'khusus'].includes(type)) {
+            throw new common_1.BadRequestException(`Invalid counselingType: ${type}. Must be 'umum', 'kelompok', or 'khusus'`);
+        }
+        return await this.reservasiService.findByCounselingType(type);
+    }
+    async getByPembinaanId(pembinaanId) {
+        return await this.reservasiService.findByPembinaanId(parseInt(pembinaanId));
+    }
+    async getByPembinaanType(type, req) {
+        if (!['ringan', 'berat'].includes(type)) {
+            throw new common_1.BadRequestException(`Invalid pembinaanType: ${type}. Must be 'ringan' or 'berat'`);
+        }
+        return await this.reservasiService.findByPembinaanType(type);
+    }
     async findAll(studentId, counselorId, status) {
         const filters = {
             studentId: studentId ? parseInt(studentId) : undefined,
@@ -259,6 +278,37 @@ __decorate([
     __metadata("design:paramtypes", [create_reservasi_dto_1.CreateReservasiDto, Object]),
     __metadata("design:returntype", Promise)
 ], ReservasiController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('pembinaan'),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [create_reservasi_dto_1.CreatePembinaanReservasiDto, Object]),
+    __metadata("design:returntype", Promise)
+], ReservasiController.prototype, "createPembinaanReservasi", null);
+__decorate([
+    (0, common_1.Get)('by-counseling-type/:type'),
+    __param(0, (0, common_1.Param)('type')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ReservasiController.prototype, "getByCounselingType", null);
+__decorate([
+    (0, common_1.Get)('by-pembinaan/:pembinaanId'),
+    __param(0, (0, common_1.Param)('pembinaanId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], ReservasiController.prototype, "getByPembinaanId", null);
+__decorate([
+    (0, common_1.Get)('by-pembinaan-type/:type'),
+    __param(0, (0, common_1.Param)('type')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], ReservasiController.prototype, "getByPembinaanType", null);
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)('studentId')),

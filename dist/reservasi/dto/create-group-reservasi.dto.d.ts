@@ -1,3 +1,5 @@
+import { SessionType } from '../enums/session-type.enum';
+import { ReservasiStatus } from '../enums/reservasi-status.enum';
 export declare class CreateGroupReservasiDto {
     groupName: string;
     creatorId: number;
@@ -5,12 +7,12 @@ export declare class CreateGroupReservasiDto {
     counselorId: number;
     preferredDate: Date;
     preferredTime: string;
-    type: 'chat' | 'tatap-muka';
+    type: SessionType;
     topicId?: number;
     notes?: string;
     room?: string;
 }
 export declare class UpdateGroupReservasiStatusDto {
-    status: 'approved' | 'rejected' | 'in_counseling' | 'completed' | 'cancelled';
+    status: ReservasiStatus;
     rejectionReason?: string;
 }

@@ -11,6 +11,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UpdateGroupReservasiStatusDto = exports.CreateGroupReservasiDto = void 0;
 const class_validator_1 = require("class-validator");
+const session_type_enum_1 = require("../enums/session-type.enum");
+const reservasi_status_enum_1 = require("../enums/reservasi-status.enum");
 class CreateGroupReservasiDto {
     groupName;
     creatorId;
@@ -50,7 +52,7 @@ __decorate([
     __metadata("design:type", String)
 ], CreateGroupReservasiDto.prototype, "preferredTime", void 0);
 __decorate([
-    (0, class_validator_1.IsEnum)(['chat', 'tatap-muka']),
+    (0, class_validator_1.IsEnum)(session_type_enum_1.SessionType),
     __metadata("design:type", String)
 ], CreateGroupReservasiDto.prototype, "type", void 0);
 __decorate([
@@ -74,7 +76,7 @@ class UpdateGroupReservasiStatusDto {
 }
 exports.UpdateGroupReservasiStatusDto = UpdateGroupReservasiStatusDto;
 __decorate([
-    (0, class_validator_1.IsEnum)(['approved', 'rejected', 'in_counseling', 'completed', 'cancelled']),
+    (0, class_validator_1.IsEnum)(reservasi_status_enum_1.ReservasiStatus),
     __metadata("design:type", String)
 ], UpdateGroupReservasiStatusDto.prototype, "status", void 0);
 __decorate([

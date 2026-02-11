@@ -42,11 +42,13 @@ const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const platform_socket_io_1 = require("@nestjs/platform-socket.io");
+const http_logging_interceptor_1 = require("./logger/http-logging.interceptor");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.use((0, cookie_parser_1.default)());
     const ioAdapter = new platform_socket_io_1.IoAdapter(app);
     app.useWebSocketAdapter(ioAdapter);
+    app.useGlobalInterceptors(new http_logging_interceptor_1.HttpLoggingInterceptor());
     app.setGlobalPrefix('api');
     const allowedOrigins = [
         'http://localhost:3000',
@@ -72,6 +74,8 @@ async function bootstrap() {
     await app.listen(port);
     console.log(`🚀 Server running on port ${port}`);
     console.log(`🌐 Global API prefix: /api`);
+    console.log(`📋 📨 HTTP Logging Interceptor: ENABLED`);
+    console.log(`✅ All routes available at: http://localhost:${port}/api/*`);
 }
 bootstrap();
 //# sourceMappingURL=main.js.map

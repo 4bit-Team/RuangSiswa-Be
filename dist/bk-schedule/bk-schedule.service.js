@@ -18,6 +18,7 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const bk_schedule_entity_1 = require("./entities/bk-schedule.entity");
 const reservasi_entity_1 = require("../reservasi/entities/reservasi.entity");
+const reservasi_status_enum_1 = require("../reservasi/enums/reservasi-status.enum");
 const user_entity_1 = require("../users/entities/user.entity");
 let BkScheduleService = class BkScheduleService {
     scheduleRepository;
@@ -125,7 +126,7 @@ let BkScheduleService = class BkScheduleService {
                 counselorId: bkId,
                 preferredDate: date,
                 preferredTime: time,
-                status: 'approved',
+                status: reservasi_status_enum_1.ReservasiStatus.APPROVED,
             },
         });
         return !!reservasi;

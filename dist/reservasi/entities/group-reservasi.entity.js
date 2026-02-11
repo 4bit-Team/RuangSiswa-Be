@@ -13,6 +13,8 @@ exports.GroupReservasi = void 0;
 const typeorm_1 = require("typeorm");
 const user_entity_1 = require("../../users/entities/user.entity");
 const counseling_category_entity_1 = require("../../counseling-category/entities/counseling-category.entity");
+const reservasi_status_enum_1 = require("../enums/reservasi-status.enum");
+const session_type_enum_1 = require("../enums/session-type.enum");
 let GroupReservasi = class GroupReservasi {
     id;
     groupName;
@@ -32,8 +34,10 @@ let GroupReservasi = class GroupReservasi {
     rejectionReason;
     room;
     qrCode;
+    qrGeneratedAt;
     attendanceConfirmed;
     completedAt;
+    chatInitializedAt;
     createdAt;
     updatedAt;
 };
@@ -82,7 +86,7 @@ __decorate([
     __metadata("design:type", String)
 ], GroupReservasi.prototype, "preferredTime", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'chat' }),
+    (0, typeorm_1.Column)({ enum: session_type_enum_1.SessionType, default: session_type_enum_1.SessionType.CHAT }),
     __metadata("design:type", String)
 ], GroupReservasi.prototype, "type", void 0);
 __decorate([
@@ -99,7 +103,7 @@ __decorate([
     __metadata("design:type", String)
 ], GroupReservasi.prototype, "notes", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'pending' }),
+    (0, typeorm_1.Column)({ enum: reservasi_status_enum_1.ReservasiStatus, default: reservasi_status_enum_1.ReservasiStatus.PENDING }),
     __metadata("design:type", String)
 ], GroupReservasi.prototype, "status", void 0);
 __decorate([
@@ -119,6 +123,10 @@ __decorate([
     __metadata("design:type", String)
 ], GroupReservasi.prototype, "qrCode", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Date)
+], GroupReservasi.prototype, "qrGeneratedAt", void 0);
+__decorate([
     (0, typeorm_1.Column)({ default: false }),
     __metadata("design:type", Boolean)
 ], GroupReservasi.prototype, "attendanceConfirmed", void 0);
@@ -126,6 +134,10 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", Date)
 ], GroupReservasi.prototype, "completedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", Date)
+], GroupReservasi.prototype, "chatInitializedAt", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)

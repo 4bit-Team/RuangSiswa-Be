@@ -2,88 +2,150 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  OneToOne,
+  JoinColumn,
+  Index,
 } from 'typeorm';
+import { Reservasi } from '../../reservasi/entities/reservasi.entity';
+import { Pembinaan } from '../../kesiswaan/pembinaan/entities/pembinaan.entity';
 import { User } from '../../users/entities/user.entity';
-import { Kelas } from '../../kelas/entities/kelas.entity';
-import { Jurusan } from '../../jurusan/entities/jurusan.entity';
 
-export type StatusPerkembanganPesertaDidik = 'Membaik' | 'Stabil' | 'Menurun' | 'Belum Terlihat Perubahan';
+export type LaporanStatus = 'ongoing' | 'completed' | 'needs_escalation' | 'archived';
 
 @Entity('laporan_bk')
+@Index(['reservasi_id'])
+@Index(['pembinaan_id'])
+@Index(['bk_id'])
+@Index(['student_id'])
 export class LaporanBk {
   @PrimaryGeneratedColumn()
   id: number;
 
+  // Link to Reservasi (ringan type only)
+  @OneToOne(() => Reservasi, { nullable: false })
+  @JoinColumn({ name: 'reservasi_id' })
+  reservasi: Reservasi;
+
   @Column()
-  namaKonseling: string;
+  reservasi_id: number;
+
+  // Link to Pembinaan (for reference)
+  @ManyToOne(() => Pembinaan, { nullable: false })
+  @JoinColumn({ name: 'pembinaan_id' })
+  pembinaan: Pembinaan;
+
+  @Column()
+  pembinaan_id: number;
+
+  // Student info
+  @Column()
+  student_id: number;
 
   @Column({ nullable: true })
-  jurusanId: number;
+  student_name: string;
 
   @Column({ nullable: true })
-  kelasId: number;
+  student_class: string;
 
-  @Column({ type: 'date' })
-  tanggalDiprosesAiBk: Date;
+  // BK Counselor
+  @ManyToOne(() => User, { nullable: false })
+  @JoinColumn({ name: 'bk_id' })
+  bk: User;
 
-  @Column({ type: 'text' })
-  deskripsiKasusMasalah: string;
+  @Column()
+  bk_id: number;
 
-  @Column({ type: 'text', nullable: true })
-  bentukPenanganganSebelumnya: string;
-
-  @Column({ type: 'text', nullable: true })
-  riwayatSpDanKasus: string;
-
-  @Column({ type: 'text', nullable: true })
-  layananBk: string;
-
-  @Column({ type: 'text', nullable: true })
-  followUpTindakanBk: string;
-
-  @Column({ type: 'text', nullable: true })
-  penahanganGuruBkKonselingProsesPembinaan: string;
-
-  @Column({ type: 'text', nullable: true })
-  pertemuanKe1: string;
-
-  @Column({ type: 'text', nullable: true })
-  pertemuanKe2: string;
-
-  @Column({ type: 'text', nullable: true })
-  pertemuanKe3: string;
-
-  @Column({ type: 'text', nullable: true })
-  hasilPemantauanKeterangan: string;
+  // Session Information
+  @Column({ nullable: true })
+  session_date: Date;
 
   @Column({ nullable: true })
-  guruBkYangMenanganiId: number;
+  session_duration_minutes: number; // Duration in minutes
 
-  @Column({
-    type: 'enum',
-    enum: ['Membaik', 'Stabil', 'Menurun', 'Belum Terlihat Perubahan'],
-    nullable: true,
-  })
-  statusPerkembanganPesertaDidik: StatusPerkembanganPesertaDidik;
+  @Column({ type: 'enum', enum: ['individu', 'kelompok', 'keluarga'], nullable: true })
+  session_type: 'individu' | 'kelompok' | 'keluarga'; // Type of counseling session
+
+  @Column({ nullable: true })
+  session_location: string; // e.g., "Ruang BK", "Kelas", etc
+
+  // Session Details
+  @Column({ type: 'text', nullable: true })
+  session_topic: string; // What was discussed
 
   @Column({ type: 'text', nullable: true })
-  keteranganKetersedianDokumen: string;
+  session_notes: string; // Detailed notes from session
 
-  @ManyToOne(() => Jurusan, { eager: true, nullable: true })
-  jurusan: Jurusan;
+  // Student Response & Progress
+  @Column({ type: 'text', nullable: true })
+  student_response: string; // How student responded/participated
 
-  @ManyToOne(() => Kelas, { eager: true, nullable: true })
-  kelas: Kelas;
+  @Column({ type: 'enum', enum: ['sangat_memahami', 'memahami', 'cukup', 'kurang'], nullable: true })
+  student_understanding_level: 'sangat_memahami' | 'memahami' | 'cukup' | 'kurang'; // 1-4 scale
 
-  @ManyToOne(() => User, { eager: true, nullable: true })
-  guruBkYangMenanganis: User;
+  @Column({ type: 'enum', enum: ['sangat_aktif', 'aktif', 'cukup', 'pasif'], nullable: true })
+  student_participation_level: 'sangat_aktif' | 'aktif' | 'cukup' | 'pasif'; // 1-4 scale
+
+  @Column({ nullable: true })
+  behavioral_improvement: boolean; // Did behavior improve after counseling?
+
+  // Follow-up & Recommendations
+  @Column({ type: 'text', nullable: true })
+  recommendations: string; // What recommendations were given
+
+  @Column({ nullable: true })
+  follow_up_date: Date; // When to follow up with student
+
+  @Column({ type: 'text', nullable: true })
+  follow_up_status: string; // Status of follow-up (e.g., "completed", "pending", "not needed")
+
+  // Parent/Guardian Communication
+  @Column({ default: false })
+  parent_notified: boolean;
+
+  @Column({ nullable: true })
+  parent_notification_date: Date;
+
+  @Column({ type: 'text', nullable: true })
+  parent_notification_content: string; // What was communicated to parents
+
+  // Escalation Tracking
+  @Column({ default: false })
+  escalated_to_waka: boolean; // Did this require escalation to WAKA?
+
+  @Column({ nullable: true })
+  escalation_reason: string; // Why it was escalated
+
+  @Column({ nullable: true })
+  escalation_date: Date;
+
+  @Column({ nullable: true })
+  bimbingan_pembina_id: number; // Reference to PembinaanWaka if escalated to WAKA
+
+  // Status & Metadata
+  @Column({ type: 'enum', enum: ['ongoing', 'completed', 'needs_escalation', 'archived'], default: 'ongoing' })
+  status: LaporanStatus;
+
+  @Column({ default: 0 })
+  total_sessions: number; // Total sessions conducted
+
+  @Column({ type: 'text', nullable: true })
+  final_assessment: string; // Overall assessment at the end
+
+  @Column({ type: 'text', nullable: true })
+  internal_notes: string; // Admin/BK internal notes
 
   @CreateDateColumn()
-  createdAt: Date;
+  created_at: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updated_at: Date;
+
+  @Column({ nullable: true })
+  created_by: number;
+
+  @Column({ nullable: true })
+  updated_by: number;
 }

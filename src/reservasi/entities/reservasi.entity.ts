@@ -1,64 +1,82 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { CounselingCategory } from '../../counseling-category/entities/counseling-category.entity';
+import { Pembinaan } from '../../kesiswaan/pembinaan/entities/pembinaan.entity';
 
 @Entity('reservasi')
 export class Reservasi {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: 'int' })
   studentId: number;
 
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'studentId' })
   student: User;
 
-  @Column()
+  @Column({ type: 'int' })
   counselorId: number;
 
   @ManyToOne(() => User, { eager: false })
   @JoinColumn({ name: 'counselorId' })
   counselor: User;
 
-  @Column()
+  @Column({ type: 'timestamp' })
   preferredDate: Date;
 
-  @Column()
+  @Column({ type: 'varchar' })
   preferredTime: string; // Format: HH:MM
 
-  @Column({ default: 'chat' })
+  @Column({ type: 'varchar', default: 'chat' })
   type: 'chat' | 'tatap-muka'; // Tipe sesi
+
+  @Column({ type: 'varchar', default: 'umum' })
+  counselingType: 'umum' | 'kelompok' | 'khusus'; // Tipe konseling (umum, kelompok, khusus/pembinaan)
+
+  @Column({ type: 'varchar', nullable: true })
+  pembinaanType: 'ringan' | 'berat' | null; // Tipe pembinaan (ringan=BK, berat=WAKA), hanya jika counselingType='khusus'
 
   @ManyToOne(() => CounselingCategory, { eager: true })
   @JoinColumn({ name: 'topicId' })
   topic: CounselingCategory;
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   topicId: number;
 
-  @Column({ nullable: true })
+  @ManyToOne(() => Pembinaan, { eager: false, nullable: true })
+  @JoinColumn({ name: 'pembinaan_id' })
+  pembinaan: Pembinaan;
+
+  @Column({ type: 'int', nullable: true })
+  pembinaan_id: number; // Reference ke Pembinaan record (untuk konseling khusus)
+
+  // OneToOne relation to PembinaanWaka (for berat type coaching)
+  @OneToOne('PembinaanWaka', 'reservasi', { nullable: true, eager: false })
+  pembinaanWaka: any;
+
+  @Column({ type: 'text', nullable: true })
   notes: string; // Catatan dari siswa
 
-  @Column({ default: 'pending' })
+  @Column({ type: 'varchar', default: 'pending' })
   status: 'pending' | 'approved' | 'rejected' | 'in_counseling' | 'completed' | 'cancelled';
 
-  @Column({ nullable: true })
+  @Column({ type: 'int', nullable: true })
   conversationId: number; // Referensi ke conversation yang dibuat saat approved
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   rejectionReason: string; // Alasan jika ditolak
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   room: string; // Ruang untuk tatap muka
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   qrCode: string; // QR code untuk attendance tatap muka
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   attendanceConfirmed: boolean; // Apakah sudah absen via QR scan
 
-  @Column({ nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   completedAt: Date; // Waktu sesi selesai
 
   @CreateDateColumn()

@@ -7,7 +7,7 @@ import { Message } from '../../chat/entities/message.entity';
 import { Call } from '../../chat/entities/call.entity';
 import { News } from '../../news/entities/news.entity';
 
-export type UserRole = 'kesiswaan' | 'siswa' | 'admin' | 'bk' | 'kakom' | 'orang_tua';
+export type UserRole = 'kesiswaan' | 'siswa' | 'admin' | 'bk' | 'kakom' | 'orang_tua' | 'waka';
 export type UserStatus = 'aktif' | 'nonaktif';
 
 @Entity('users')
@@ -15,34 +15,34 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', unique: true })
   username: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   fullName: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', unique: true })
   email: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   password: string;
 
-  @Column({ type: 'enum', enum: ['kesiswaan', 'siswa', 'admin', 'bk', 'kakom', 'orang_tua'], default: 'siswa' })
+  @Column({ type: 'enum', enum: ['kesiswaan', 'siswa', 'admin', 'bk', 'kakom', 'orang_tua', 'waka'], default: 'siswa' })
   role: UserRole;
 
   @Column({ type: 'enum', enum: ['aktif', 'nonaktif'], default: 'aktif' })
   status: UserStatus;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   specialty: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   kartu_pelajar_file: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   phone_number: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   kelas_lengkap: string;
 
   @ManyToOne(() => Kelas, kelas => kelas.users, { nullable: true })

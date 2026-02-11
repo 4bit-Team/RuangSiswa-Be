@@ -1,0 +1,31 @@
+import { Reservasi } from '../../../reservasi/entities/reservasi.entity';
+import { Pembinaan } from '../../pembinaan/entities/pembinaan.entity';
+import { User } from '../../../users/entities/user.entity';
+export type WakDecision = 'sp3' | 'do';
+export type PembinaanWakaStatus = 'pending' | 'in_review' | 'decided' | 'executed' | 'appealed';
+export declare class PembinaanWaka {
+    id: number;
+    reservasi: Reservasi;
+    reservasi_id: number;
+    pembinaan: Pembinaan;
+    pembinaan_id: number;
+    waka: User;
+    waka_id: number;
+    status: PembinaanWakaStatus;
+    wak_decision: WakDecision | null;
+    decision_reason: string | null;
+    notes: string | null;
+    decision_date: Date | null;
+    student_response: string | null;
+    student_acknowledged: boolean;
+    parent_notified: boolean;
+    parent_notification_date: Date | null;
+    has_appeal: boolean;
+    appeal_reason: string | null;
+    appeal_date: Date | null;
+    appeal_decision: WakDecision | null;
+    created_at: Date;
+    updated_at: Date;
+    created_by: number;
+    updated_by: number;
+}

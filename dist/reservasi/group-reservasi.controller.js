@@ -72,6 +72,14 @@ let GroupReservasiController = class GroupReservasiController {
         }
         return await this.groupReservasiService.remove(parseInt(id));
     }
+    async initializeSessionResources(id, req) {
+        const groupReservasi = await this.groupReservasiService.findOne(parseInt(id));
+        if (!groupReservasi) {
+            throw new common_1.NotFoundException('Group reservasi tidak ditemukan');
+        }
+        console.log(`Initializing session resources for group reservasi ${id}`);
+        return await this.groupReservasiService.initializeSessionResources(parseInt(id));
+    }
 };
 exports.GroupReservasiController = GroupReservasiController;
 __decorate([
@@ -143,6 +151,14 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], GroupReservasiController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Post)(':id/initialize'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], GroupReservasiController.prototype, "initializeSessionResources", null);
 exports.GroupReservasiController = GroupReservasiController = __decorate([
     (0, common_1.Controller)('reservasi/group'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

@@ -14,7 +14,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { ReservasiService } from './reservasi.service';
-import { CreateReservasiDto, UpdateReservasiStatusDto } from './dto/create-reservasi.dto';
+import { CreateReservasiDto, UpdateReservasiStatusDto, CreatePembinaanReservasiDto } from './dto/create-reservasi.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -34,6 +34,47 @@ export class ReservasiController {
   async create(@Body() createReservasiDto: CreateReservasiDto, @Request() req) {
     console.log('Creating reservasi:', createReservasiDto);
     return await this.reservasiService.create(createReservasiDto);
+  }
+
+  // Create reservasi khusus untuk pembinaan (dari PembinaanPage action ringan/berat)
+  @Post('pembinaan')
+  async createPembinaanReservasi(@Body() createPembinaanDto: CreatePembinaanReservasiDto, @Request() req) {
+    console.log('Creating pembinaan reservasi:', createPembinaanDto);
+    return await this.reservasiService.createPembinaanReservasi(createPembinaanDto);
+  }
+
+  // Get reservasi by counselingType (untuk filtering di tabs)
+  @Get('by-counseling-type/:type')
+  async getByCounselingType(
+    @Param('type') type: string,
+    @Request() req,
+  ) {
+    // Validate counseling type
+    if (!['umum', 'kelompok', 'khusus'].includes(type)) {
+      throw new BadRequestException(`Invalid counselingType: ${type}. Must be 'umum', 'kelompok', or 'khusus'`);
+    }
+
+    return await this.reservasiService.findByCounselingType(type);
+  }
+
+  // Get reservasi by pembinaanId (untuk tracking status pembinaan)
+  @Get('by-pembinaan/:pembinaanId')
+  async getByPembinaanId(@Param('pembinaanId') pembinaanId: string) {
+    return await this.reservasiService.findByPembinaanId(parseInt(pembinaanId));
+  }
+
+  // Get reservasi by pembinaanType (untuk BK/WAKA dashboards)
+  @Get('by-pembinaan-type/:type')
+  async getByPembinaanType(
+    @Param('type') type: string,
+    @Request() req,
+  ) {
+    // Validate pembinaan type
+    if (!['ringan', 'berat'].includes(type)) {
+      throw new BadRequestException(`Invalid pembinaanType: ${type}. Must be 'ringan' or 'berat'`);
+    }
+
+    return await this.reservasiService.findByPembinaanType(type as 'ringan' | 'berat');
   }
 
   // Get all reservasi dengan filter

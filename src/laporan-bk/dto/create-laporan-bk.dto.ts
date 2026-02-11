@@ -1,72 +1,194 @@
-import { IsString, IsDate, IsNumber, IsOptional, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
-
-export type StatusPerkembanganPesertaDidik = 'Membaik' | 'Stabil' | 'Menurun' | 'Belum Terlihat Perubahan';
+import { IsInt, IsString, IsOptional, IsEnum, IsBoolean, IsDateString, IsNumber } from 'class-validator';
 
 export class CreateLaporanBkDto {
+  @IsInt()
+  reservasi_id: number;
+
+  @IsInt()
+  pembinaan_id: number;
+
+  @IsInt()
+  student_id: number;
+
+  @IsOptional()
   @IsString()
-  namaKonseling: string;
+  student_name?: string;
+
+  @IsOptional()
+  @IsString()
+  student_class?: string;
+
+  @IsInt()
+  bk_id: number;
+
+  @IsOptional()
+  @IsDateString()
+  session_date?: string;
 
   @IsOptional()
   @IsNumber()
-  jurusanId?: number;
+  session_duration_minutes?: number;
+
+  @IsOptional()
+  @IsEnum(['individu', 'kelompok', 'keluarga'])
+  session_type?: 'individu' | 'kelompok' | 'keluarga';
+
+  @IsOptional()
+  @IsString()
+  session_location?: string;
+
+  @IsOptional()
+  @IsString()
+  session_topic?: string;
+
+  @IsOptional()
+  @IsString()
+  session_notes?: string;
+}
+
+export class UpdateLaporanBkDto {
+  @IsOptional()
+  @IsDateString()
+  session_date?: string;
 
   @IsOptional()
   @IsNumber()
-  kelasId?: number;
+  session_duration_minutes?: number;
 
-  @IsDate()
-  @Type(() => Date)
-  tanggalDiprosesAiBk: Date;
-
-  @IsString()
-  deskripsiKasusMasalah: string;
+  @IsOptional()
+  @IsEnum(['individu', 'kelompok', 'keluarga'])
+  session_type?: 'individu' | 'kelompok' | 'keluarga';
 
   @IsOptional()
   @IsString()
-  bentukPenanganganSebelumnya?: string;
+  session_location?: string;
 
   @IsOptional()
   @IsString()
-  riwayatSpDanKasus?: string;
+  session_topic?: string;
 
   @IsOptional()
   @IsString()
-  layananBk?: string;
+  session_notes?: string;
 
   @IsOptional()
   @IsString()
-  followUpTindakanBk?: string;
+  student_response?: string;
+
+  @IsOptional()
+  @IsEnum(['sangat_memahami', 'memahami', 'cukup', 'kurang'])
+  student_understanding_level?: 'sangat_memahami' | 'memahami' | 'cukup' | 'kurang';
+
+  @IsOptional()
+  @IsEnum(['sangat_aktif', 'aktif', 'cukup', 'pasif'])
+  student_participation_level?: 'sangat_aktif' | 'aktif' | 'cukup' | 'pasif';
+
+  @IsOptional()
+  @IsBoolean()
+  behavioral_improvement?: boolean;
 
   @IsOptional()
   @IsString()
-  penahanganGuruBkKonselingProsesPembinaan?: string;
+  recommendations?: string;
+
+  @IsOptional()
+  @IsDateString()
+  follow_up_date?: string;
 
   @IsOptional()
   @IsString()
-  pertemuanKe1?: string;
+  follow_up_status?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  parent_notified?: boolean;
+
+  @IsOptional()
+  @IsDateString()
+  parent_notification_date?: string;
 
   @IsOptional()
   @IsString()
-  pertemuanKe2?: string;
+  parent_notification_content?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  escalated_to_waka?: boolean;
 
   @IsOptional()
   @IsString()
-  pertemuanKe3?: string;
+  escalation_reason?: string;
+
+  @IsOptional()
+  @IsEnum(['ongoing', 'completed', 'needs_escalation', 'archived'])
+  status?: 'ongoing' | 'completed' | 'needs_escalation' | 'archived';
 
   @IsOptional()
   @IsString()
-  hasilPemantauanKeterangan?: string;
+  final_assessment?: string;
+
+  @IsOptional()
+  @IsString()
+  internal_notes?: string;
+}
+
+export class RecordSessionDto {
+  @IsDateString()
+  session_date: string;
 
   @IsOptional()
   @IsNumber()
-  guruBkYangMenanganiId?: number;
+  session_duration_minutes?: number;
 
   @IsOptional()
-  @IsEnum(['Membaik', 'Stabil', 'Menurun', 'Belum Terlihat Perubahan'])
-  statusPerkembanganPesertaDidik?: StatusPerkembanganPesertaDidik;
+  @IsEnum(['individu', 'kelompok', 'keluarga'])
+  session_type?: 'individu' | 'kelompok' | 'keluarga';
 
   @IsOptional()
   @IsString()
-  keteranganKetersedianDokumen?: string;
+  session_location?: string;
+
+  @IsString()
+  session_topic: string;
+
+  @IsString()
+  session_notes: string;
+
+  @IsOptional()
+  @IsString()
+  student_response?: string;
+
+  @IsOptional()
+  @IsEnum(['sangat_memahami', 'memahami', 'cukup', 'kurang'])
+  student_understanding_level?: 'sangat_memahami' | 'memahami' | 'cukup' | 'kurang';
+
+  @IsOptional()
+  @IsEnum(['sangat_aktif', 'aktif', 'cukup', 'pasif'])
+  student_participation_level?: 'sangat_aktif' | 'aktif' | 'cukup' | 'pasif';
+
+  @IsOptional()
+  @IsString()
+  recommendations?: string;
+
+  @IsOptional()
+  @IsDateString()
+  follow_up_date?: string;
+}
+
+export class EscalateToBkDto {
+  @IsString()
+  escalation_reason: string;
+
+  @IsOptional()
+  @IsString()
+  final_assessment?: string;
+}
+
+export class CompleteFollowUpDto {
+  @IsString()
+  follow_up_status: string;
+
+  @IsOptional()
+  @IsString()
+  follow_up_notes?: string;
 }

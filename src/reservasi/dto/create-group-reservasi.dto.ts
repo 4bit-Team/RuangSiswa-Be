@@ -1,4 +1,6 @@
 import { IsString, IsNumber, IsDate, IsOptional, IsEnum, IsArray } from 'class-validator';
+import { SessionType } from '../enums/session-type.enum';
+import { ReservasiStatus } from '../enums/reservasi-status.enum';
 
 export class CreateGroupReservasiDto {
   @IsString()
@@ -20,8 +22,8 @@ export class CreateGroupReservasiDto {
   @IsString()
   preferredTime: string;
 
-  @IsEnum(['chat', 'tatap-muka'])
-  type: 'chat' | 'tatap-muka';
+  @IsEnum(SessionType)
+  type: SessionType;
 
   @IsOptional()
   @IsNumber()
@@ -37,8 +39,8 @@ export class CreateGroupReservasiDto {
 }
 
 export class UpdateGroupReservasiStatusDto {
-  @IsEnum(['approved', 'rejected', 'in_counseling', 'completed', 'cancelled'])
-  status: 'approved' | 'rejected' | 'in_counseling' | 'completed' | 'cancelled';
+  @IsEnum(ReservasiStatus)
+  status: ReservasiStatus;
 
   @IsOptional()
   @IsString()
