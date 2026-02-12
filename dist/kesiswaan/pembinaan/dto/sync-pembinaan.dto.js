@@ -31,7 +31,8 @@ __decorate([
 ], SyncPembinaanDto.prototype, "walas_id", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.Length)(3, 255),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Length)(1, 255),
     __metadata("design:type", String)
 ], SyncPembinaanDto.prototype, "walas_name", void 0);
 __decorate([
@@ -40,7 +41,8 @@ __decorate([
 ], SyncPembinaanDto.prototype, "siswas_id", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.Length)(3, 255),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Length)(1, 255),
     __metadata("design:type", String)
 ], SyncPembinaanDto.prototype, "siswas_name", void 0);
 __decorate([
@@ -50,11 +52,13 @@ __decorate([
 ], SyncPembinaanDto.prototype, "kasus", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.Length)(3, 255),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.Length)(1, 255),
     __metadata("design:type", String)
 ], SyncPembinaanDto.prototype, "tindak_lanjut", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.Length)(1, 2000),
     __metadata("design:type", String)
 ], SyncPembinaanDto.prototype, "keterangan", void 0);

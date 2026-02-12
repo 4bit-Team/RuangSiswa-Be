@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PointPelanggaranController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
 const point_pelanggaran_service_1 = require("./point-pelanggaran.service");
 const create_point_pelanggaran_dto_1 = require("./dto/create-point-pelanggaran.dto");
 const update_point_pelanggaran_dto_1 = require("./dto/update-point-pelanggaran.dto");
@@ -56,6 +57,15 @@ let PointPelanggaranController = class PointPelanggaranController {
     }
     async getSummary() {
         return await this.pointPelanggaranService.getSummaryByYear();
+    }
+    async importPdf(file) {
+        if (!file) {
+            throw new common_1.BadRequestException('File PDF harus diunggah');
+        }
+        if (!file.mimetype.includes('pdf')) {
+            throw new common_1.BadRequestException('File harus berformat PDF');
+        }
+        return await this.pointPelanggaranService.importPointsFromPdf(file.buffer);
     }
     async calculateBobot(kodes) {
         if (!Array.isArray(kodes)) {
@@ -146,6 +156,16 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], PointPelanggaranController.prototype, "getSummary", null);
+__decorate([
+    (0, common_1.Post)('import-pdf'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN', 'KESISWAAN'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file')),
+    __param(0, (0, common_1.UploadedFile)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], PointPelanggaranController.prototype, "importPdf", null);
 __decorate([
     (0, common_1.Post)('calculate-bobot'),
     __param(0, (0, common_1.Body)('kodes')),

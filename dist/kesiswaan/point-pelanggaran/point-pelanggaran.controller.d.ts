@@ -21,6 +21,17 @@ export declare class PointPelanggaranController {
         totalPelanggaran: number;
         activeYear: boolean;
     }[]>;
+    importPdf(file: Express.Multer.File): Promise<{
+        success: boolean;
+        tahun_point: number;
+        total_imported: number;
+        total_skipped: number;
+        errors: Array<{
+            kode: string;
+            error: string;
+        }>;
+        imported_data: import("./dto/import-point-pelanggaran.dto").PointPelanggaranImportData[];
+    }>;
     calculateBobot(kodes: number[]): Promise<{
         kodes: number[];
         total: number;

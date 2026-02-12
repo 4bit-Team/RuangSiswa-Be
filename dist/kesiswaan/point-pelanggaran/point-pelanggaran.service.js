@@ -18,11 +18,14 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const point_pelanggaran_entity_1 = require("./entities/point-pelanggaran.entity");
+const point_pelanggaran_pdf_service_1 = require("./services/point-pelanggaran-pdf.service");
 let PointPelanggaranService = PointPelanggaranService_1 = class PointPelanggaranService {
     pointPelanggaranRepository;
+    pdfService;
     logger = new common_1.Logger(PointPelanggaranService_1.name);
-    constructor(pointPelanggaranRepository) {
+    constructor(pointPelanggaranRepository, pdfService) {
         this.pointPelanggaranRepository = pointPelanggaranRepository;
+        this.pdfService = pdfService;
     }
     async create(dto) {
         try {
@@ -213,11 +216,95 @@ let PointPelanggaranService = PointPelanggaranService_1 = class PointPelanggaran
             maxBobot: parseInt(row.maxBobot),
         }));
     }
+    async importPointsFromPdf(fileBuffer) {
+        try {
+            this.logger.log('Starting PDF import process...');
+            const extractionResult = await this.pdfService.extractPointsFromPdf(fileBuffer);
+            const { tahun_point, points } = extractionResult;
+            this.logger.log(`PDF extraction successful: tahun=${tahun_point}, points=${points.length}`);
+            const imported_data = [];
+            const errors = [];
+            let skipped = 0;
+            for (const extractedPoint of points) {
+                try {
+                    const kodeNum = this.convertKodeToNumber(extractedPoint.kode);
+                    const existingKode = await this.pointPelanggaranRepository.findOne({
+                        where: { kode: kodeNum },
+                    });
+                    if (existingKode) {
+                        this.logger.warn(`Kode ${extractedPoint.kode} sudah ada, skip`);
+                        skipped++;
+                        continue;
+                    }
+                    const newPoint = this.pointPelanggaranRepository.create({
+                        tahun_point,
+                        category_point: extractedPoint.category_point,
+                        nama_pelanggaran: extractedPoint.jenis_pelanggaran,
+                        kode: kodeNum,
+                        bobot: extractedPoint.bobot,
+                        isActive: false,
+                        isSanksi: extractedPoint.sanksi ? true : false,
+                        isDo: extractedPoint.sanksi?.toLowerCase().includes('do') || false,
+                        deskripsi: extractedPoint.deskripsi,
+                    });
+                    const saved = await this.pointPelanggaranRepository.save(newPoint);
+                    imported_data.push({
+                        id: saved.id,
+                        tahun_point: saved.tahun_point,
+                        category_point: saved.category_point,
+                        nama_pelanggaran: saved.nama_pelanggaran,
+                        kode: saved.kode,
+                        bobot: saved.bobot,
+                        isActive: saved.isActive,
+                        isSanksi: saved.isSanksi,
+                        isDo: saved.isDo,
+                    });
+                    this.logger.log(`✅ Imported: ${extractedPoint.kode} | ${extractedPoint.jenis_pelanggaran}`);
+                }
+                catch (error) {
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+                    errors.push({
+                        kode: extractedPoint.kode,
+                        error: errorMsg,
+                    });
+                    this.logger.error(`❌ Error importing kode ${extractedPoint.kode}: ${errorMsg}`);
+                }
+            }
+            this.logger.log(`Import complete: imported=${imported_data.length}, skipped=${skipped}, errors=${errors.length}`);
+            return {
+                success: true,
+                tahun_point,
+                total_imported: imported_data.length,
+                total_skipped: skipped,
+                errors,
+                imported_data,
+            };
+        }
+        catch (error) {
+            this.logger.error(`Error in importPointsFromPdf: ${error.message}`);
+            throw error;
+        }
+    }
+    convertKodeToNumber(kode) {
+        try {
+            const firstChar = kode.charCodeAt(0) - 65;
+            const numPart = kode.replace(/[A-Z]/g, '').replace(/\./g, '');
+            if (numPart) {
+                return parseInt(numPart);
+            }
+            return firstChar + 1;
+        }
+        catch (error) {
+            this.logger.warn(`Error converting kode ${kode}: ${error.message}`);
+            return Math.floor(Math.random() * 1000) + 1;
+        }
+    }
 };
 exports.PointPelanggaranService = PointPelanggaranService;
 exports.PointPelanggaranService = PointPelanggaranService = PointPelanggaranService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(point_pelanggaran_entity_1.PointPelanggaran)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        point_pelanggaran_pdf_service_1.PointPelanggaranPdfService])
 ], PointPelanggaranService);
 //# sourceMappingURL=point-pelanggaran.service.js.map

@@ -81,6 +81,23 @@ let PembinaanController = PembinaanController_1 = class PembinaanController {
     async findByWalas(walas_id) {
         return await this.pembinaanService.findByWalas(walas_id);
     }
+    async fetchAndSyncFromWalas(class_id, walas_id, student_id) {
+        const filters = {
+            class_id: class_id ? parseInt(class_id) : undefined,
+            walas_id: walas_id ? parseInt(walas_id) : undefined,
+            student_id: student_id ? parseInt(student_id) : undefined,
+        };
+        this.logger.log('📥 POST /api/v1/pembinaan/fetch-sync called with filters:', JSON.stringify(filters));
+        try {
+            const result = await this.pembinaanService.fetchAndSyncFromWalas(filters);
+            this.logger.log(`✅ Fetch-sync complete: Synced=${result.synced}, Skipped=${result.skipped}, Errors=${result.errors.length}`);
+            return result;
+        }
+        catch (error) {
+            this.logger.error(`❌ Error in fetchAndSyncFromWalas: ${error.message}`, error.stack);
+            throw error;
+        }
+    }
     async syncFromWalas(dto) {
         if (!dto.kasus || !dto.tindak_lanjut) {
             throw new common_1.BadRequestException('kasus dan tindak_lanjut harus diisi');
@@ -177,6 +194,17 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
 ], PembinaanController.prototype, "findByWalas", null);
+__decorate([
+    (0, common_1.Post)('fetch-sync'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, roles_decorator_1.Roles)('ADMIN', 'KESISWAAN'),
+    __param(0, (0, common_1.Query)('class_id')),
+    __param(1, (0, common_1.Query)('walas_id')),
+    __param(2, (0, common_1.Query)('student_id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], PembinaanController.prototype, "fetchAndSyncFromWalas", null);
 __decorate([
     (0, common_1.Post)('sync'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),

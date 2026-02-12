@@ -44,25 +44,61 @@ let PembinaanService = PembinaanService_1 = class PembinaanService {
                 end_date: filters?.end_date,
                 limit: 100,
             });
-            if (!response || !response.data) {
-                this.logger.warn('No data received from WALASU pelanggaran endpoint');
+            if (!response) {
+                this.logger.warn('No response received from WALASU pelanggaran endpoint');
                 return result;
             }
-            const pelanggaranList = Array.isArray(response.data) ? response.data : [response.data];
+            let pelanggaranList = [];
+            if (response.data?.data && Array.isArray(response.data.data)) {
+                pelanggaranList = response.data.data;
+                this.logger.debug(`Found ${pelanggaranList.length} pelanggaran in nested response.data.data`);
+            }
+            else if (Array.isArray(response.data)) {
+                pelanggaranList = response.data;
+                this.logger.debug(`Found ${pelanggaranList.length} pelanggaran in response.data (array)`);
+            }
+            else {
+                this.logger.warn(`Unexpected response structure from Walas API: ${JSON.stringify(response)}`);
+                return result;
+            }
+            if (pelanggaranList.length === 0) {
+                this.logger.log('No pelanggaran records to sync');
+                return result;
+            }
             for (const pelanggaran of pelanggaranList) {
                 try {
+                    this.logger.debug(`Processing pelanggaran ID ${pelanggaran.id} for student ${pelanggaran.siswas_id}`);
+                    if (!pelanggaran.walas_id) {
+                        this.logger.warn(`Pelanggaran ID ${pelanggaran.id} missing walas_id`);
+                        result.errors.push({
+                            pelanggaran_id: pelanggaran.id,
+                            siswas_id: pelanggaran.siswas_id,
+                            error: 'Missing walas_id - cannot sync',
+                        });
+                        continue;
+                    }
+                    if (!pelanggaran.kasus) {
+                        this.logger.warn(`Pelanggaran ID ${pelanggaran.id} missing kasus for student ${pelanggaran.siswas_id}`);
+                        result.errors.push({
+                            pelanggaran_id: pelanggaran.id,
+                            siswas_id: pelanggaran.siswas_id,
+                            error: 'Missing kasus - cannot sync',
+                        });
+                        continue;
+                    }
                     const syncDto = {
                         walas_id: pelanggaran.walas_id,
                         walas_name: pelanggaran.walas_name || 'Unknown',
                         siswas_id: pelanggaran.siswas_id,
                         siswas_name: pelanggaran.siswas_name || 'Unknown',
-                        kasus: pelanggaran.kasus,
+                        kasus: pelanggaran.kasus.trim(),
                         tindak_lanjut: pelanggaran.tindak_lanjut || '',
                         keterangan: pelanggaran.keterangan || '',
-                        tanggal_pembinaan: pelanggaran.tanggal_pembinaan || new Date().toISOString(),
+                        tanggal_pembinaan: pelanggaran.tanggal_pembinaan || new Date().toISOString().split('T')[0],
                         class_id: pelanggaran.class_id,
                         class_name: pelanggaran.class_name,
                     };
+                    this.logger.debug(`Checking if pembinaan already exists: walas=${syncDto.walas_id}, siswa=${syncDto.siswas_id}, kasus=${syncDto.kasus}, tanggal=${syncDto.tanggal_pembinaan}`);
                     const existing = await this.pembinaanRepository.findOne({
                         where: {
                             walas_id: syncDto.walas_id,
@@ -72,15 +108,17 @@ let PembinaanService = PembinaanService_1 = class PembinaanService {
                         },
                     });
                     if (existing) {
-                        this.logger.debug(`Pembinaan already exists for student ${syncDto.siswas_id}, skipping`);
+                        this.logger.debug(`Pembinaan already exists for student ${syncDto.siswas_id} on ${syncDto.tanggal_pembinaan}, skipping`);
                         result.skipped++;
                         continue;
                     }
+                    this.logger.debug(`Syncing new pembinaan for student ${syncDto.siswas_id}`);
                     await this.syncFromWalas(syncDto);
                     result.synced++;
+                    this.logger.log(`✅ Pembinaan synced successfully for student ${syncDto.siswas_id}`);
                 }
                 catch (itemError) {
-                    this.logger.error(`Error syncing pelanggaran: ${itemError.message}`);
+                    this.logger.error(`Error syncing pelanggaran ID ${pelanggaran.id}: ${itemError.message}`);
                     result.errors.push({
                         pelanggaran_id: pelanggaran.id,
                         siswas_id: pelanggaran.siswas_id,
@@ -98,6 +136,9 @@ let PembinaanService = PembinaanService_1 = class PembinaanService {
     }
     async syncFromWalas(dto) {
         try {
+            if (!dto.walas_id || !dto.siswas_id || !dto.kasus) {
+                throw new Error(`Invalid DTO: walas_id=${dto.walas_id}, siswas_id=${dto.siswas_id}, kasus=${dto.kasus}`);
+            }
             const existing = await this.pembinaanRepository.findOne({
                 where: {
                     walas_id: dto.walas_id,
@@ -155,7 +196,16 @@ let PembinaanService = PembinaanService_1 = class PembinaanService {
     }
     async matchPointPelanggaran(kasus) {
         try {
-            const kasusLower = kasus.toLowerCase();
+            if (!kasus || typeof kasus !== 'string') {
+                this.logger.warn(`Invalid kasus for matching: ${kasus}`);
+                return {
+                    id: null,
+                    type: 'none',
+                    confidence: 0,
+                    explanation: 'Invalid or empty kasus',
+                };
+            }
+            const kasusLower = kasus.trim().toLowerCase();
             const words = kasusLower.split(/\s+/).filter((w) => w.length > 2);
             const points = await this.pointPelanggaranRepository.find({
                 order: { bobot: 'DESC' },

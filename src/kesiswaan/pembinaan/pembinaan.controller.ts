@@ -149,9 +149,42 @@ export class PembinaanController {
   }
 
   /**
+   * POST /api/v1/pembinaan/fetch-sync
+   * Fetch and sync all pembinaan data from WALASU
+   * Does NOT require request body - pulls directly from WALASU
+   * Supports optional filters: class_id, walas_id, student_id
+   */
+  @Post('fetch-sync')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'KESISWAAN')
+  async fetchAndSyncFromWalas(
+    @Query('class_id') class_id?: string,
+    @Query('walas_id') walas_id?: string,
+    @Query('student_id') student_id?: string,
+  ) {
+    const filters = {
+      class_id: class_id ? parseInt(class_id) : undefined,
+      walas_id: walas_id ? parseInt(walas_id) : undefined,
+      student_id: student_id ? parseInt(student_id) : undefined,
+    };
+
+    this.logger.log('📥 POST /api/v1/pembinaan/fetch-sync called with filters:', JSON.stringify(filters));
+
+    try {
+      const result = await this.pembinaanService.fetchAndSyncFromWalas(filters);
+      this.logger.log(`✅ Fetch-sync complete: Synced=${result.synced}, Skipped=${result.skipped}, Errors=${result.errors.length}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`❌ Error in fetchAndSyncFromWalas: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
    * POST /api/v1/pembinaan/sync
    * Sync pembinaan data from WALASU
    * Automatically matches with point pelanggaran based on kasus
+   * Requires: kasus, tindak_lanjut in body
    */
   @Post('sync')
   @UseGuards(JwtAuthGuard, RolesGuard)

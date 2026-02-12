@@ -12,6 +12,7 @@ const typeorm_1 = require("@nestjs/typeorm");
 const point_pelanggaran_service_1 = require("./point-pelanggaran.service");
 const point_pelanggaran_controller_1 = require("./point-pelanggaran.controller");
 const point_pelanggaran_entity_1 = require("./entities/point-pelanggaran.entity");
+const point_pelanggaran_pdf_service_1 = require("./services/point-pelanggaran-pdf.service");
 let PointPelanggaranModule = class PointPelanggaranModule {
 };
 exports.PointPelanggaranModule = PointPelanggaranModule;
@@ -19,7 +20,7 @@ exports.PointPelanggaranModule = PointPelanggaranModule = __decorate([
     (0, common_1.Module)({
         imports: [typeorm_1.TypeOrmModule.forFeature([point_pelanggaran_entity_1.PointPelanggaran])],
         controllers: [point_pelanggaran_controller_1.PointPelanggaranController],
-        providers: [point_pelanggaran_service_1.PointPelanggaranService],
+        providers: [point_pelanggaran_service_1.PointPelanggaranService, point_pelanggaran_pdf_service_1.PointPelanggaranPdfService],
         exports: [point_pelanggaran_service_1.PointPelanggaranService],
     })
 ], PointPelanggaranModule);

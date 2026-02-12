@@ -11,7 +11,10 @@ import {
   BadRequestException,
   NotFoundException,
   ParseIntPipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { PointPelanggaranService } from './point-pelanggaran.service';
 import { CreatePointPelanggaranDto } from './dto/create-point-pelanggaran.dto';
 import { UpdatePointPelanggaranDto } from './dto/update-point-pelanggaran.dto';
@@ -100,6 +103,28 @@ export class PointPelanggaranController {
   @Get('summary')
   async getSummary() {
     return await this.pointPelanggaranService.getSummaryByYear();
+  }
+
+  /**
+   * Import point pelanggaran dari PDF
+   * Validasi: Header harus berisi "DAFTAR KREDIT POIN PELANGGARAN SISWA SMK NEGERI 1 CIBINONG"
+   * Extract: Tahun dari format "SMKN 1 Cbn-CabDin.Wil 1/2023"
+   * Extract: Points dari halaman 4-5
+   */
+  @Post('import-pdf')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'KESISWAAN')
+  @UseInterceptors(FileInterceptor('file'))
+  async importPdf(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('File PDF harus diunggah');
+    }
+
+    if (!file.mimetype.includes('pdf')) {
+      throw new BadRequestException('File harus berformat PDF');
+    }
+
+    return await this.pointPelanggaranService.importPointsFromPdf(file.buffer);
   }
 
   /**

@@ -13,6 +13,15 @@ export declare class PembinaanController {
     findById(id: number): Promise<import("./entities/pembinaan.entity").Pembinaan>;
     findByStudent(siswas_id: number): Promise<import("./entities/pembinaan.entity").Pembinaan[]>;
     findByWalas(walas_id: number): Promise<import("./entities/pembinaan.entity").Pembinaan[]>;
+    fetchAndSyncFromWalas(class_id?: string, walas_id?: string, student_id?: string): Promise<{
+        synced: number;
+        skipped: number;
+        errors: {
+            pelanggaran_id?: number;
+            siswas_id?: number;
+            error: string;
+        }[];
+    }>;
     syncFromWalas(dto: SyncPembinaanDto): Promise<import("./entities/pembinaan.entity").Pembinaan>;
     update(id: number, dto: UpdatePembinaanDto): Promise<import("./entities/pembinaan.entity").Pembinaan>;
     assignPoint(id: number, point_pelanggaran_id: number): Promise<import("./entities/pembinaan.entity").Pembinaan>;

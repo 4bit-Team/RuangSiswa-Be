@@ -8,6 +8,21 @@ import { UpdatePembinaanDto } from './dto/update-pembinaan.dto';
 import { WalasApiClient } from '../../walas/walas-api.client';
 import { NotificationService } from '../../notifications/notification.service';
 
+// Type for pelanggaran data from WALASU API
+interface WalasPelanggaran {
+  id: number;
+  walas_id: number;
+  walas_name?: string;
+  siswas_id: number;
+  siswas_name?: string;
+  kasus: string;
+  tindak_lanjut?: string;
+  keterangan?: string;
+  tanggal_pembinaan?: string;
+  class_id?: number;
+  class_name?: string;
+}
+
 @Injectable()
 export class PembinaanService {
   private readonly logger = new Logger(PembinaanService.name);
@@ -50,29 +65,74 @@ export class PembinaanService {
         limit: 100,
       });
 
-      if (!response || !response.data) {
-        this.logger.warn('No data received from WALASU pelanggaran endpoint');
+      if (!response) {
+        this.logger.warn('No response received from WALASU pelanggaran endpoint');
         return result;
       }
 
-      const pelanggaranList = Array.isArray(response.data) ? response.data : [response.data];
+      // Handle nested response structure from Walas API
+      // Response format: { success, message, data: { data: [...], pagination: {...} } }
+      let pelanggaranList: WalasPelanggaran[] = [];
+      
+      if (response.data?.data && Array.isArray(response.data.data)) {
+        // Nested structure: response.data.data contains the array
+        pelanggaranList = response.data.data;
+        this.logger.debug(`Found ${pelanggaranList.length} pelanggaran in nested response.data.data`);
+      } else if (Array.isArray(response.data)) {
+        // Direct array structure: response.data is the array
+        pelanggaranList = response.data;
+        this.logger.debug(`Found ${pelanggaranList.length} pelanggaran in response.data (array)`);
+      } else {
+        this.logger.warn(`Unexpected response structure from Walas API: ${JSON.stringify(response)}`);
+        return result;
+      }
+
+      if (pelanggaranList.length === 0) {
+        this.logger.log('No pelanggaran records to sync');
+        return result;
+      }
 
       // Process setiap pelanggaran
       for (const pelanggaran of pelanggaranList) {
         try {
+          this.logger.debug(`Processing pelanggaran ID ${pelanggaran.id} for student ${pelanggaran.siswas_id}`);
+          
+          // Validasi data critical
+          if (!pelanggaran.walas_id) {
+            this.logger.warn(`Pelanggaran ID ${pelanggaran.id} missing walas_id`);
+            result.errors.push({
+              pelanggaran_id: pelanggaran.id,
+              siswas_id: pelanggaran.siswas_id,
+              error: 'Missing walas_id - cannot sync',
+            });
+            continue;
+          }
+
+          if (!pelanggaran.kasus) {
+            this.logger.warn(`Pelanggaran ID ${pelanggaran.id} missing kasus for student ${pelanggaran.siswas_id}`);
+            result.errors.push({
+              pelanggaran_id: pelanggaran.id,
+              siswas_id: pelanggaran.siswas_id,
+              error: 'Missing kasus - cannot sync',
+            });
+            continue;
+          }
+
           // Transform WALASU data to SyncPembinaanDto format
           const syncDto: SyncPembinaanDto = {
             walas_id: pelanggaran.walas_id,
             walas_name: pelanggaran.walas_name || 'Unknown',
             siswas_id: pelanggaran.siswas_id,
             siswas_name: pelanggaran.siswas_name || 'Unknown',
-            kasus: pelanggaran.kasus,
+            kasus: pelanggaran.kasus.trim(),
             tindak_lanjut: pelanggaran.tindak_lanjut || '',
             keterangan: pelanggaran.keterangan || '',
-            tanggal_pembinaan: pelanggaran.tanggal_pembinaan || new Date().toISOString(),
+            tanggal_pembinaan: pelanggaran.tanggal_pembinaan || new Date().toISOString().split('T')[0],
             class_id: pelanggaran.class_id,
             class_name: pelanggaran.class_name,
           };
+
+          this.logger.debug(`Checking if pembinaan already exists: walas=${syncDto.walas_id}, siswa=${syncDto.siswas_id}, kasus=${syncDto.kasus}, tanggal=${syncDto.tanggal_pembinaan}`);
 
           // Check if already exists
           const existing = await this.pembinaanRepository.findOne({
@@ -86,17 +146,19 @@ export class PembinaanService {
 
           if (existing) {
             this.logger.debug(
-              `Pembinaan already exists for student ${syncDto.siswas_id}, skipping`,
+              `Pembinaan already exists for student ${syncDto.siswas_id} on ${syncDto.tanggal_pembinaan}, skipping`,
             );
             result.skipped++;
             continue;
           }
 
           // Sync using existing syncFromWalas logic
+          this.logger.debug(`Syncing new pembinaan for student ${syncDto.siswas_id}`);
           await this.syncFromWalas(syncDto);
           result.synced++;
+          this.logger.log(`✅ Pembinaan synced successfully for student ${syncDto.siswas_id}`);
         } catch (itemError) {
-          this.logger.error(`Error syncing pelanggaran: ${itemError.message}`);
+          this.logger.error(`Error syncing pelanggaran ID ${pelanggaran.id}: ${itemError.message}`);
           result.errors.push({
             pelanggaran_id: pelanggaran.id,
             siswas_id: pelanggaran.siswas_id,
@@ -122,6 +184,13 @@ export class PembinaanService {
    */
   async syncFromWalas(dto: SyncPembinaanDto): Promise<Pembinaan> {
     try {
+      // Validate critical fields
+      if (!dto.walas_id || !dto.siswas_id || !dto.kasus) {
+        throw new Error(
+          `Invalid DTO: walas_id=${dto.walas_id}, siswas_id=${dto.siswas_id}, kasus=${dto.kasus}`,
+        );
+      }
+
       // Check if pembinaan already exists (avoid duplicates)
       const existing = await this.pembinaanRepository.findOne({
         where: {
@@ -222,7 +291,18 @@ export class PembinaanService {
     kasus: string,
   ): Promise<{ id: number | null; type: string; confidence: number; explanation: string }> {
     try {
-      const kasusLower = kasus.toLowerCase();
+      // Validate kasus is not empty
+      if (!kasus || typeof kasus !== 'string') {
+        this.logger.warn(`Invalid kasus for matching: ${kasus}`);
+        return {
+          id: null,
+          type: 'none',
+          confidence: 0,
+          explanation: 'Invalid or empty kasus',
+        };
+      }
+
+      const kasusLower = kasus.trim().toLowerCase();
       const words = kasusLower.split(/\s+/).filter((w) => w.length > 2);
 
       // Get all active point pelanggaran

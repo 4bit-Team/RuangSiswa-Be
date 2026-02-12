@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { PointPelanggaran } from './entities/point-pelanggaran.entity';
 import { CreatePointPelanggaranDto } from './dto/create-point-pelanggaran.dto';
 import { UpdatePointPelanggaranDto } from './dto/update-point-pelanggaran.dto';
+import { PointPelanggaranPdfService } from './services/point-pelanggaran-pdf.service';
+import { ExtractedPointData, PointPelanggaranImportData } from './dto/import-point-pelanggaran.dto';
 
 @Injectable()
 export class PointPelanggaranService {
@@ -12,6 +14,7 @@ export class PointPelanggaranService {
   constructor(
     @InjectRepository(PointPelanggaran)
     private pointPelanggaranRepository: Repository<PointPelanggaran>,
+    private pdfService: PointPelanggaranPdfService,
   ) {}
 
   /**
@@ -318,5 +321,131 @@ export class PointPelanggaranService {
       totalPelanggaran: parseInt(row.totalPelanggaran),
       maxBobot: parseInt(row.maxBobot),
     }));
+  }
+
+  /**
+   * Import point pelanggaran dari PDF
+   */
+  async importPointsFromPdf(
+    fileBuffer: Buffer,
+  ): Promise<{
+    success: boolean;
+    tahun_point: number;
+    total_imported: number;
+    total_skipped: number;
+    errors: Array<{ kode: string; error: string }>;
+    imported_data: PointPelanggaranImportData[];
+  }> {
+    try {
+      this.logger.log('Starting PDF import process...');
+
+      // Extract data dari PDF
+      const extractionResult = await this.pdfService.extractPointsFromPdf(fileBuffer);
+      const { tahun_point, points } = extractionResult;
+
+      this.logger.log(
+        `PDF extraction successful: tahun=${tahun_point}, points=${points.length}`,
+      );
+
+      const imported_data: PointPelanggaranImportData[] = [];
+      const errors: Array<{ kode: string; error: string }> = [];
+      let skipped = 0;
+
+      // Process setiap point
+      for (const extractedPoint of points) {
+        try {
+          // Convert kode string ke number
+          const kodeNum = this.convertKodeToNumber(extractedPoint.kode);
+
+          // Cek apakah kode sudah ada
+          const existingKode = await this.pointPelanggaranRepository.findOne({
+            where: { kode: kodeNum },
+          });
+
+          if (existingKode) {
+            this.logger.warn(`Kode ${extractedPoint.kode} sudah ada, skip`);
+            skipped++;
+            continue;
+          }
+
+          // Create point pelanggaran
+          const newPoint = this.pointPelanggaranRepository.create({
+            tahun_point,
+            category_point: extractedPoint.category_point,
+            nama_pelanggaran: extractedPoint.jenis_pelanggaran,
+            kode: kodeNum,
+            bobot: extractedPoint.bobot,
+            isActive: false, // Default inactive, admin bisa set active kemudian
+            isSanksi: extractedPoint.sanksi ? true : false,
+            isDo: extractedPoint.sanksi?.toLowerCase().includes('do') || false,
+            deskripsi: extractedPoint.deskripsi,
+          });
+
+          const saved = await this.pointPelanggaranRepository.save(newPoint);
+
+          imported_data.push({
+            id: saved.id,
+            tahun_point: saved.tahun_point,
+            category_point: saved.category_point,
+            nama_pelanggaran: saved.nama_pelanggaran,
+            kode: saved.kode,
+            bobot: saved.bobot,
+            isActive: saved.isActive,
+            isSanksi: saved.isSanksi,
+            isDo: saved.isDo,
+          });
+
+          this.logger.log(
+            `✅ Imported: ${extractedPoint.kode} | ${extractedPoint.jenis_pelanggaran}`,
+          );
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          errors.push({
+            kode: extractedPoint.kode,
+            error: errorMsg,
+          });
+          this.logger.error(
+            `❌ Error importing kode ${extractedPoint.kode}: ${errorMsg}`,
+          );
+        }
+      }
+
+      this.logger.log(
+        `Import complete: imported=${imported_data.length}, skipped=${skipped}, errors=${errors.length}`,
+      );
+
+      return {
+        success: true,
+        tahun_point,
+        total_imported: imported_data.length,
+        total_skipped: skipped,
+        errors,
+        imported_data,
+      };
+    } catch (error) {
+      this.logger.error(`Error in importPointsFromPdf: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper: Convert kode string (A.1, B.2) ke number
+   */
+  private convertKodeToNumber(kode: string): number {
+    try {
+      // Simple conversion: A.1 -> 1, A.2 -> 2, B.1 -> 3, etc
+      // Ambil dari ASCII value huruf + parsing numbers
+      const firstChar = kode.charCodeAt(0) - 65; // A=0, B=1, etc
+      const numPart = kode.replace(/[A-Z]/g, '').replace(/\./g, '');
+
+      if (numPart) {
+        return parseInt(numPart);
+      }
+
+      return firstChar + 1;
+    } catch (error) {
+      this.logger.warn(`Error converting kode ${kode}: ${error.message}`);
+      return Math.floor(Math.random() * 1000) + 1; // Fallback: random number
+    }
   }
 }

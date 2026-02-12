@@ -5,27 +5,31 @@ export class SyncPembinaanDto {
   walas_id: number;
 
   @IsString()
-  @Length(3, 255)
-  walas_name: string;
+  @IsOptional()
+  @Length(1, 255)
+  walas_name?: string;
 
   @IsInt()
   siswas_id: number;
 
   @IsString()
-  @Length(3, 255)
-  siswas_name: string;
+  @IsOptional()
+  @Length(1, 255)
+  siswas_name?: string;
 
   @IsString()
   @Length(3, 255)
   kasus: string;
 
   @IsString()
-  @Length(3, 255)
-  tindak_lanjut: string;
+  @IsOptional()
+  @Length(1, 255)
+  tindak_lanjut?: string;
 
   @IsString()
+  @IsOptional()
   @Length(1, 2000)
-  keterangan: string;
+  keterangan?: string;
 
   @IsDateString()
   tanggal_pembinaan: string; // YYYY-MM-DD
