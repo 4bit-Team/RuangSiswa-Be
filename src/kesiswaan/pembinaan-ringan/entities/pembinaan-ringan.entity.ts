@@ -30,12 +30,12 @@ export class PembinaanRingan {
   id: number;
 
   // Relation to Reservasi (ringan type only)
-  @OneToOne(() => Reservasi, { nullable: false, onDelete: 'CASCADE' })
+  @OneToOne(() => Reservasi, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'reservasi_id' })
-  reservasi: Reservasi;
+  reservasi: Reservasi | null;
 
-  @Column()
-  reservasi_id: number;
+  @Column({ nullable: true })
+  reservasi_id: number | null;
 
   // Relation to Pembinaan (for reference)
   @ManyToOne(() => Pembinaan, { nullable: false })
@@ -73,6 +73,10 @@ export class PembinaanRingan {
 
   @Column({ type: 'varchar', length: 5 })
   scheduled_time: string; // Format: HH:MM
+
+  // SP Information (Surat Peringatan)
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  sp_level: 'SP1' | 'SP2' | null; // SP level (SP1, SP2), null jika pembinaan langsung tanpa SP
 
   // Status
   @Column({ type: 'enum', enum: ['pending', 'approved', 'rejected', 'in_progress', 'completed', 'cancelled'], default: 'pending' })

@@ -1,0 +1,34 @@
+import { Pembinaan } from '../../pembinaan/entities/pembinaan.entity';
+import { User } from '../../../users/entities/user.entity';
+export type PembinaanOrtuStatus = 'pending' | 'sent' | 'read' | 'responded' | 'closed';
+export declare class PembinaanOrtu {
+    id: number;
+    pembinaan: Pembinaan;
+    pembinaan_id: number;
+    student_id: number;
+    student_name: string;
+    student_class: string;
+    parent: User;
+    parent_id: number;
+    parent_name: string;
+    parent_phone: string;
+    violation_details: string;
+    letter_content: string;
+    scheduled_date: Date;
+    scheduled_time: string;
+    location: string;
+    status: PembinaanOrtuStatus;
+    kesiswaan_notes: string;
+    parent_response: string;
+    parent_response_date: Date;
+    meeting_result: string;
+    meeting_date: Date;
+    requires_follow_up: boolean;
+    follow_up_notes: string | null;
+    communication_method: 'sms' | 'whatsapp' | 'email' | 'manual';
+    sent_at: Date;
+    read_at: Date;
+    createdAt: Date;
+    updatedAt: Date;
+    closedAt: Date;
+}

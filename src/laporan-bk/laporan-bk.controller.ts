@@ -35,10 +35,10 @@ export class LaporanBkController {
     return await this.laporanBkService.create(createDto);
   }
 
-  // Get all laporan BK (admin only)
+  // Get all laporan BK (admin & kesiswaan)
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'kesiswaan')
   async findAll() {
     return await this.laporanBkService.findAll();
   }

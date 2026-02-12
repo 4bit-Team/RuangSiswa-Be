@@ -34,6 +34,9 @@ export class Pembinaan {
   @Column({ type: 'int' })
   siswas_id: number; // ID Siswa dari WALASU
 
+  @Column({ type: 'int', nullable: true })
+  student_user_id: number; // FK to users.id - ID User siswa dari RuangSiswa (untuk query parent users)
+
   @Column({ type: 'varchar', length: 255 })
   siswas_name: string; // Nama Siswa (cached)
 
@@ -85,6 +88,9 @@ export class Pembinaan {
 
   @Column({ type: 'date', nullable: true })
   follow_up_date: string; // Tanggal follow up jika ada
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  sp_level: 'SP1' | 'SP2' | null; // SP level (SP1, SP2), null jika pembinaan langsung tanpa SP
 
   @CreateDateColumn()
   createdAt: Date;

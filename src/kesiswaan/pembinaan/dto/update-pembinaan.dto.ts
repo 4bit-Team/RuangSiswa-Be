@@ -25,4 +25,8 @@ export class UpdatePembinaanDto {
   @IsInt()
   @IsOptional()
   point_pelanggaran_id?: number; // Manual assignment jika perlu override
+
+  @IsString()
+  @IsOptional()
+  sp_level?: 'SP1' | 'SP2' | null; // SP level (optional)
 }

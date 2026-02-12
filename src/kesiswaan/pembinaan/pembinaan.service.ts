@@ -174,7 +174,7 @@ export class PembinaanService {
 
           // Sync using existing syncFromWalas logic
           this.logger.debug(`Syncing new pembinaan for student ${syncDto.siswas_id}`);
-          await this.syncFromWalas(syncDto);
+          const pembinaan = await this.syncFromWalas(syncDto);
           result.synced++;
           this.logger.log(`✅ Pembinaan synced successfully for student ${syncDto.siswas_id}`);
 
@@ -186,6 +186,15 @@ export class PembinaanService {
             const studentUser = await this.createOrUpdateStudentUser(syncDto.siswas_id, siswasName, className);
             studentUserId = studentUser?.id;
             this.logger.log(`✅ Student user created/found with ID: ${studentUserId}`);
+
+            // Update pembinaan record dengan student_user_id untuk query parent users nanti
+            if (studentUserId) {
+              await this.pembinaanRepository.update(
+                { id: pembinaan.id },
+                { student_user_id: studentUserId }
+              );
+              this.logger.log(`✅ Updated pembinaan ${pembinaan.id} with student_user_id: ${studentUserId}`);
+            }
           } catch (userError) {
             this.logger.warn(`❌ Could not create/update user for student ${syncDto.siswas_id}: ${userError.message}`);
             // Don't fail sync if user creation fails

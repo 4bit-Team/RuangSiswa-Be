@@ -19,23 +19,26 @@ export class PembinaanRinganService {
   /**
    * Create pembinaan ringan dari reservasi
    * Called saat kesiswaan membuat reservasi untuk proses ke BK
+   * reservasi_id optional - dapat dibuat kemudian jika perlu
    */
   async create(createDto: CreatePembinaanRinganDto): Promise<PembinaanRingan> {
     try {
-      // Validate reservasi existe
-      const reservasi = await this.reservasiRepo.findOne({
-        where: { id: createDto.reservasi_id },
-      });
+      // Validate reservasi if provided
+      if (createDto.reservasi_id) {
+        const reservasi = await this.reservasiRepo.findOne({
+          where: { id: createDto.reservasi_id },
+        });
 
-      if (!reservasi) {
-        throw new NotFoundException(`Reservasi ${createDto.reservasi_id} tidak ditemukan`);
+        if (!reservasi) {
+          throw new NotFoundException(`Reservasi ${createDto.reservasi_id} tidak ditemukan`);
+        }
       }
 
       // Parse scheduled_date dan scheduled_time
       const scheduledDate = new Date(createDto.scheduled_date);
 
       const pembinaanRingan = this.pembinaanRinganRepo.create({
-        reservasi_id: createDto.reservasi_id,
+        reservasi_id: createDto.reservasi_id || null,
         pembinaan_id: createDto.pembinaan_id,
         student_id: createDto.student_id,
         student_name: createDto.student_name,
@@ -44,11 +47,12 @@ export class PembinaanRinganService {
         catatan_bk: createDto.catatan_bk,
         scheduled_date: scheduledDate,
         scheduled_time: createDto.scheduled_time,
+        sp_level: createDto.sp_level || null,
         status: 'pending',
       });
 
       const saved = await this.pembinaanRinganRepo.save(pembinaanRingan);
-      this.logger.log(`✅ Pembinaan Ringan created for student ${createDto.student_id} (Reservasi: ${createDto.reservasi_id})`);
+      this.logger.log(`✅ Pembinaan Ringan created for student ${createDto.student_id}${createDto.reservasi_id ? ` (Reservasi: ${createDto.reservasi_id})` : ''}`);
       return saved;
     } catch (error) {
       this.logger.error(`Error creating pembinaan ringan: ${error.message}`);
@@ -109,6 +113,9 @@ export class PembinaanRinganService {
     record.status = approveDto.status;
     record.bk_feedback = approveDto.bk_feedback || null;
     record.bk_notes = approveDto.bk_notes || null;
+    if (approveDto.sp_level !== undefined) {
+      record.sp_level = approveDto.sp_level || null;
+    }
 
     if (approveDto.status === 'approved') {
       record.approvedAt = new Date();
