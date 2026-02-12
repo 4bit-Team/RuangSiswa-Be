@@ -131,7 +131,7 @@ export class PointPelanggaranController {
    * Calculate total bobot from multiple kode
    */
   @Post('calculate-bobot')
-  async calculateBobot(@Body('kodes') kodes: number[]) {
+  async calculateBobot(@Body('kodes') kodes: string[]) {
     if (!Array.isArray(kodes)) {
       throw new BadRequestException('kodes harus berupa array');
     }

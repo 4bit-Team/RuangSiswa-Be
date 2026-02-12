@@ -69,6 +69,8 @@ const news_category_module_1 = require("./news-category/news-category.module");
 const point_pelanggaran_module_1 = require("./kesiswaan/point-pelanggaran/point-pelanggaran.module");
 const pembinaan_module_1 = require("./kesiswaan/pembinaan/pembinaan.module");
 const pembinaan_waka_module_1 = require("./kesiswaan/pembinaan-waka/pembinaan-waka.module");
+const pembinaan_ringan_module_1 = require("./kesiswaan/pembinaan-ringan/pembinaan-ringan.module");
+const pembinaan_ortu_module_1 = require("./kesiswaan/pembinaan-ortu/pembinaan-ortu.module");
 const walas_module_1 = require("./walas/walas.module");
 const notification_module_1 = require("./notifications/notification.module");
 const fs = __importStar(require("fs"));
@@ -140,6 +142,8 @@ exports.AppModule = AppModule = __decorate([
             point_pelanggaran_module_1.PointPelanggaranModule,
             pembinaan_module_1.PembinaanModule,
             pembinaan_waka_module_1.PembinaanWakaModule,
+            pembinaan_ringan_module_1.PembinaanRinganModule,
+            pembinaan_ortu_module_1.PembinaanOrtuModule,
             laporan_bk_module_1.LaporanBkModule,
             walas_module_1.WalasModule,
         ],

@@ -2,7 +2,7 @@ export declare class CreatePointPelanggaranDto {
     tahun_point: number;
     category_point: string;
     nama_pelanggaran: string;
-    kode: number;
+    kode: string;
     bobot: number;
     isActive?: boolean;
     isSanksi?: boolean;

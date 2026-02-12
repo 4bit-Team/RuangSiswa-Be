@@ -143,7 +143,7 @@ export class PointPelanggaranService {
   /**
    * Get point pelanggaran by kode
    */
-  async findByKode(kode: number): Promise<PointPelanggaran> {
+  async findByKode(kode: string): Promise<PointPelanggaran> {
     const pointPelanggaran = await this.pointPelanggaranRepository.findOne({
       where: { kode },
     });
@@ -267,7 +267,7 @@ export class PointPelanggaranService {
    * Get total bobot for a list of code violations
    * Berguna untuk menghitung total poin pelanggaran siswa
    */
-  async calculateTotalBobot(kodes: number[]): Promise<number> {
+  async calculateTotalBobot(kodes: string[]): Promise<number> {
     if (!kodes || kodes.length === 0) {
       return 0;
     }
@@ -335,13 +335,17 @@ export class PointPelanggaranService {
     total_skipped: number;
     errors: Array<{ kode: string; error: string }>;
     imported_data: PointPelanggaranImportData[];
+    debugLog?: {
+      pointsPerPage: { [page: number]: number };
+      totalExtracted: number;
+    };
   }> {
     try {
       this.logger.log('Starting PDF import process...');
 
       // Extract data dari PDF
       const extractionResult = await this.pdfService.extractPointsFromPdf(fileBuffer);
-      const { tahun_point, points } = extractionResult;
+      const { tahun_point, points, debugLog } = extractionResult;
 
       this.logger.log(
         `PDF extraction successful: tahun=${tahun_point}, points=${points.length}`,
@@ -354,30 +358,34 @@ export class PointPelanggaranService {
       // Process setiap point
       for (const extractedPoint of points) {
         try {
-          // Convert kode string ke number
-          const kodeNum = this.convertKodeToNumber(extractedPoint.kode);
+          // Gunakan kode string langsung dari PDF (A.1, D.10.5, dll)
+          const kode = extractedPoint.kode;
 
           // Cek apakah kode sudah ada
           const existingKode = await this.pointPelanggaranRepository.findOne({
-            where: { kode: kodeNum },
+            where: { kode },
           });
 
           if (existingKode) {
-            this.logger.warn(`Kode ${extractedPoint.kode} sudah ada, skip`);
+            this.logger.warn(`Kode ${kode} sudah ada, skip`);
             skipped++;
             continue;
           }
 
           // Create point pelanggaran
+          // Map sanksi value to separate isSanksi and isDo flags
+          const isSanksi = extractedPoint.sanksi === 'Sanksi';
+          const isDo = extractedPoint.sanksi === 'DO';
+          
           const newPoint = this.pointPelanggaranRepository.create({
             tahun_point,
             category_point: extractedPoint.category_point,
             nama_pelanggaran: extractedPoint.jenis_pelanggaran,
-            kode: kodeNum,
+            kode,
             bobot: extractedPoint.bobot,
             isActive: false, // Default inactive, admin bisa set active kemudian
-            isSanksi: extractedPoint.sanksi ? true : false,
-            isDo: extractedPoint.sanksi?.toLowerCase().includes('do') || false,
+            isSanksi,
+            isDo,
             deskripsi: extractedPoint.deskripsi,
           });
 
@@ -421,6 +429,7 @@ export class PointPelanggaranService {
         total_skipped: skipped,
         errors,
         imported_data,
+        debugLog,
       };
     } catch (error) {
       this.logger.error(`Error in importPointsFromPdf: ${error.message}`);
@@ -428,24 +437,4 @@ export class PointPelanggaranService {
     }
   }
 
-  /**
-   * Helper: Convert kode string (A.1, B.2) ke number
-   */
-  private convertKodeToNumber(kode: string): number {
-    try {
-      // Simple conversion: A.1 -> 1, A.2 -> 2, B.1 -> 3, etc
-      // Ambil dari ASCII value huruf + parsing numbers
-      const firstChar = kode.charCodeAt(0) - 65; // A=0, B=1, etc
-      const numPart = kode.replace(/[A-Z]/g, '').replace(/\./g, '');
-
-      if (numPart) {
-        return parseInt(numPart);
-      }
-
-      return firstChar + 1;
-    } catch (error) {
-      this.logger.warn(`Error converting kode ${kode}: ${error.message}`);
-      return Math.floor(Math.random() * 1000) + 1; // Fallback: random number
-    }
-  }
 }

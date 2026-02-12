@@ -1,10 +1,43 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
@@ -21,16 +54,26 @@ const pembinaan_entity_1 = require("./entities/pembinaan.entity");
 const point_pelanggaran_entity_1 = require("../point-pelanggaran/entities/point-pelanggaran.entity");
 const walas_api_client_1 = require("../../walas/walas-api.client");
 const notification_service_1 = require("../../notifications/notification.service");
+const users_service_1 = require("../../users/users.service");
+const kelas_service_1 = require("../../kelas/kelas.service");
+const jurusan_service_1 = require("../../jurusan/jurusan.service");
+const bcrypt = __importStar(require("bcrypt"));
 let PembinaanService = PembinaanService_1 = class PembinaanService {
     pembinaanRepository;
     pointPelanggaranRepository;
     walasApiClient;
+    usersService;
+    kelasService;
+    jurusanService;
     notificationService;
     logger = new common_1.Logger(PembinaanService_1.name);
-    constructor(pembinaanRepository, pointPelanggaranRepository, walasApiClient, notificationService) {
+    constructor(pembinaanRepository, pointPelanggaranRepository, walasApiClient, usersService, kelasService, jurusanService, notificationService) {
         this.pembinaanRepository = pembinaanRepository;
         this.pointPelanggaranRepository = pointPelanggaranRepository;
         this.walasApiClient = walasApiClient;
+        this.usersService = usersService;
+        this.kelasService = kelasService;
+        this.jurusanService = jurusanService;
         this.notificationService = notificationService;
     }
     async fetchAndSyncFromWalas(filters) {
@@ -116,6 +159,14 @@ let PembinaanService = PembinaanService_1 = class PembinaanService {
                     await this.syncFromWalas(syncDto);
                     result.synced++;
                     this.logger.log(`✅ Pembinaan synced successfully for student ${syncDto.siswas_id}`);
+                    try {
+                        const siswasName = syncDto.siswas_name || `Siswa ${syncDto.siswas_id}`;
+                        const className = syncDto.class_name || '';
+                        await this.createOrUpdateStudentUser(syncDto.siswas_id, siswasName, className);
+                    }
+                    catch (userError) {
+                        this.logger.warn(`Could not create/update user for student ${syncDto.siswas_id}: ${userError.message}`);
+                    }
                 }
                 catch (itemError) {
                     this.logger.error(`Error syncing pelanggaran ID ${pelanggaran.id}: ${itemError.message}`);
@@ -416,6 +467,71 @@ let PembinaanService = PembinaanService_1 = class PembinaanService {
             order: { createdAt: 'DESC' },
         });
     }
+    async createOrUpdateStudentUser(siswasId, siswasName, className) {
+        try {
+            const username = siswasName.replace(/\s+/g, '_').toLowerCase();
+            const email = `siswa.${siswasId}@ruangsiswa`;
+            const existingUser = await this.usersService.findOneByEmail(email);
+            if (existingUser) {
+                this.logger.debug(`User already exists for student ${siswasId}, skipping creation`);
+                return;
+            }
+            const { kelasNama, jurusanKode } = this.parseClassName(className);
+            let kelasId;
+            let jurusanId;
+            if (kelasNama) {
+                const kelas = await this.kelasService.findByNama(kelasNama);
+                if (kelas) {
+                    kelasId = kelas.id;
+                    this.logger.debug(`Found kelas: ${kelasNama} (ID: ${kelasId})`);
+                }
+                else {
+                    this.logger.warn(`Kelas not found for nama: ${kelasNama}`);
+                }
+            }
+            if (jurusanKode) {
+                const jurusan = await this.jurusanService.findByKode(jurusanKode);
+                if (jurusan) {
+                    jurusanId = jurusan.id;
+                    this.logger.debug(`Found jurusan: ${jurusanKode} (ID: ${jurusanId})`);
+                }
+                else {
+                    this.logger.warn(`Jurusan not found for kode: ${jurusanKode}`);
+                }
+            }
+            const defaultPassword = 'ruangsiswa123';
+            const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+            await this.usersService.create({
+                username,
+                email,
+                password: hashedPassword,
+                fullName: siswasName,
+                role: 'siswa',
+                status: 'aktif',
+                kelas_lengkap: className,
+                kelas_id: kelasId,
+                jurusan_id: jurusanId,
+            });
+            this.logger.log(`✅ User created successfully for student ${siswasId} (${siswasName}) | ` +
+                `Kelas: ${kelasId || 'N/A'} | Jurusan: ${jurusanId || 'N/A'}`);
+        }
+        catch (error) {
+            this.logger.error(`Error creating user for student ${siswasId}: ${error.message}`);
+            throw error;
+        }
+    }
+    parseClassName(className) {
+        if (!className || typeof className !== 'string') {
+            return { kelasNama: null, jurusanKode: null };
+        }
+        const parts = className.trim().split(/\s+/);
+        const kelasNama = parts[0] || null;
+        const jurusanKode = parts[1] || null;
+        return {
+            kelasNama: kelasNama === 'X' || kelasNama === 'XI' || kelasNama === 'XII' ? kelasNama : null,
+            jurusanKode,
+        };
+    }
     async getWalasStatistics(filters) {
         try {
             const stats = await this.walasApiClient.getPelanggaranStats({
@@ -452,11 +568,14 @@ exports.PembinaanService = PembinaanService = PembinaanService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(pembinaan_entity_1.Pembinaan)),
     __param(1, (0, typeorm_1.InjectRepository)(point_pelanggaran_entity_1.PointPelanggaran)),
-    __param(3, (0, common_1.Optional)()),
-    __param(3, (0, common_1.Inject)((0, common_1.forwardRef)(() => notification_service_1.NotificationService))),
+    __param(6, (0, common_1.Optional)()),
+    __param(6, (0, common_1.Inject)((0, common_1.forwardRef)(() => notification_service_1.NotificationService))),
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         walas_api_client_1.WalasApiClient,
+        users_service_1.UsersService,
+        kelas_service_1.KelasService,
+        jurusan_service_1.JurusanService,
         notification_service_1.NotificationService])
 ], PembinaanService);
 //# sourceMappingURL=pembinaan.service.js.map

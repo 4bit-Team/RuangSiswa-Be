@@ -25,6 +25,15 @@ let JurusanService = class JurusanService {
     async findOne(id) {
         return this.jurusanRepo.findOne({ where: { id } });
     }
+    async findByKode(kode) {
+        return this.jurusanRepo.findOne({ where: { kode } });
+    }
+    async findByNama(nama) {
+        return this.jurusanRepo.findOne({ where: { nama } });
+    }
+    async findAll() {
+        return this.jurusanRepo.find();
+    }
 };
 exports.JurusanService = JurusanService;
 exports.JurusanService = JurusanService = __decorate([

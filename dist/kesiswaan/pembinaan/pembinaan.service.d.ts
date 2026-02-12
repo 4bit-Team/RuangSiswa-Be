@@ -5,13 +5,19 @@ import { SyncPembinaanDto } from './dto/sync-pembinaan.dto';
 import { UpdatePembinaanDto } from './dto/update-pembinaan.dto';
 import { WalasApiClient } from '../../walas/walas-api.client';
 import { NotificationService } from '../../notifications/notification.service';
+import { UsersService } from '../../users/users.service';
+import { KelasService } from '../../kelas/kelas.service';
+import { JurusanService } from '../../jurusan/jurusan.service';
 export declare class PembinaanService {
     private pembinaanRepository;
     private pointPelanggaranRepository;
     private walasApiClient;
+    private usersService;
+    private kelasService;
+    private jurusanService;
     private notificationService?;
     private readonly logger;
-    constructor(pembinaanRepository: Repository<Pembinaan>, pointPelanggaranRepository: Repository<PointPelanggaran>, walasApiClient: WalasApiClient, notificationService?: NotificationService | undefined);
+    constructor(pembinaanRepository: Repository<Pembinaan>, pointPelanggaranRepository: Repository<PointPelanggaran>, walasApiClient: WalasApiClient, usersService: UsersService, kelasService: KelasService, jurusanService: JurusanService, notificationService?: NotificationService | undefined);
     fetchAndSyncFromWalas(filters?: {
         student_id?: number;
         class_id?: number;
@@ -47,6 +53,8 @@ export declare class PembinaanService {
         walas_id?: number;
     }): Promise<any>;
     getUnmatched(): Promise<Pembinaan[]>;
+    private createOrUpdateStudentUser;
+    private parseClassName;
     getWalasStatistics(filters?: {
         class_id?: number;
         walas_id?: number;

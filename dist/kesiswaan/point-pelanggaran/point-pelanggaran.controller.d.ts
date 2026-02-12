@@ -31,9 +31,15 @@ export declare class PointPelanggaranController {
             error: string;
         }>;
         imported_data: import("./dto/import-point-pelanggaran.dto").PointPelanggaranImportData[];
+        debugLog?: {
+            pointsPerPage: {
+                [page: number]: number;
+            };
+            totalExtracted: number;
+        };
     }>;
-    calculateBobot(kodes: number[]): Promise<{
-        kodes: number[];
+    calculateBobot(kodes: string[]): Promise<{
+        kodes: string[];
         total: number;
     }>;
     findById(id: number): Promise<import("./entities/point-pelanggaran.entity").PointPelanggaran>;

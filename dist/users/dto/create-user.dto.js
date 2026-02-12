@@ -5,6 +5,7 @@ class CreateUserDto {
     username;
     email;
     password;
+    fullName;
     role;
     status;
     kartu_pelajar_file;

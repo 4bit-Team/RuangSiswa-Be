@@ -43,8 +43,8 @@ __decorate([
     __metadata("design:type", String)
 ], PointPelanggaran.prototype, "nama_pelanggaran", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int', unique: true }),
-    __metadata("design:type", Number)
+    (0, typeorm_1.Column)({ type: 'varchar', length: 50, unique: true }),
+    __metadata("design:type", String)
 ], PointPelanggaran.prototype, "kode", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'int' }),

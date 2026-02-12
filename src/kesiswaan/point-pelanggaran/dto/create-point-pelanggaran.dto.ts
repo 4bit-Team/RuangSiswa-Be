@@ -12,8 +12,9 @@ export class CreatePointPelanggaranDto {
   @Length(3, 255)
   nama_pelanggaran: string;
 
-  @IsInt()
-  kode: number;
+  @IsString()
+  @Length(1, 50)
+  kode: string;
 
   @IsInt()
   @Min(1)

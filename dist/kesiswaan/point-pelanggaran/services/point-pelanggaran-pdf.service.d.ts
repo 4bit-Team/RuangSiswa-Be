@@ -7,6 +7,12 @@ interface PdfExtractionResult {
         header_found: boolean;
         errors: string[];
     };
+    debugLog?: {
+        pointsPerPage: {
+            [page: number]: number;
+        };
+        totalExtracted: number;
+    };
 }
 export declare class PointPelanggaranPdfService {
     private readonly logger;
@@ -15,6 +21,5 @@ export declare class PointPelanggaranPdfService {
     private extractYearFromPdf;
     private extractPointsData;
     private parseBobotValue;
-    private convertKodeToNumber;
 }
 export {};

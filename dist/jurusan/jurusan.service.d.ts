@@ -4,4 +4,7 @@ export declare class JurusanService {
     private readonly jurusanRepo;
     constructor(jurusanRepo: Repository<Jurusan>);
     findOne(id: number): Promise<Jurusan | null>;
+    findByKode(kode: string): Promise<Jurusan | null>;
+    findByNama(nama: string): Promise<Jurusan | null>;
+    findAll(): Promise<Jurusan[]>;
 }

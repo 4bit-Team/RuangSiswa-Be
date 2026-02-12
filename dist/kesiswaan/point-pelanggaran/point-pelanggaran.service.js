@@ -220,31 +220,33 @@ let PointPelanggaranService = PointPelanggaranService_1 = class PointPelanggaran
         try {
             this.logger.log('Starting PDF import process...');
             const extractionResult = await this.pdfService.extractPointsFromPdf(fileBuffer);
-            const { tahun_point, points } = extractionResult;
+            const { tahun_point, points, debugLog } = extractionResult;
             this.logger.log(`PDF extraction successful: tahun=${tahun_point}, points=${points.length}`);
             const imported_data = [];
             const errors = [];
             let skipped = 0;
             for (const extractedPoint of points) {
                 try {
-                    const kodeNum = this.convertKodeToNumber(extractedPoint.kode);
+                    const kode = extractedPoint.kode;
                     const existingKode = await this.pointPelanggaranRepository.findOne({
-                        where: { kode: kodeNum },
+                        where: { kode },
                     });
                     if (existingKode) {
-                        this.logger.warn(`Kode ${extractedPoint.kode} sudah ada, skip`);
+                        this.logger.warn(`Kode ${kode} sudah ada, skip`);
                         skipped++;
                         continue;
                     }
+                    const isSanksi = extractedPoint.sanksi === 'Sanksi';
+                    const isDo = extractedPoint.sanksi === 'DO';
                     const newPoint = this.pointPelanggaranRepository.create({
                         tahun_point,
                         category_point: extractedPoint.category_point,
                         nama_pelanggaran: extractedPoint.jenis_pelanggaran,
-                        kode: kodeNum,
+                        kode,
                         bobot: extractedPoint.bobot,
                         isActive: false,
-                        isSanksi: extractedPoint.sanksi ? true : false,
-                        isDo: extractedPoint.sanksi?.toLowerCase().includes('do') || false,
+                        isSanksi,
+                        isDo,
                         deskripsi: extractedPoint.deskripsi,
                     });
                     const saved = await this.pointPelanggaranRepository.save(newPoint);
@@ -278,25 +280,12 @@ let PointPelanggaranService = PointPelanggaranService_1 = class PointPelanggaran
                 total_skipped: skipped,
                 errors,
                 imported_data,
+                debugLog,
             };
         }
         catch (error) {
             this.logger.error(`Error in importPointsFromPdf: ${error.message}`);
             throw error;
-        }
-    }
-    convertKodeToNumber(kode) {
-        try {
-            const firstChar = kode.charCodeAt(0) - 65;
-            const numPart = kode.replace(/[A-Z]/g, '').replace(/\./g, '');
-            if (numPart) {
-                return parseInt(numPart);
-            }
-            return firstChar + 1;
-        }
-        catch (error) {
-            this.logger.warn(`Error converting kode ${kode}: ${error.message}`);
-            return Math.floor(Math.random() * 1000) + 1;
         }
     }
 };

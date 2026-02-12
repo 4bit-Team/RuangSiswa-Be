@@ -25,6 +25,12 @@ let KelasService = class KelasService {
     async findOne(id) {
         return this.kelasRepo.findOne({ where: { id } });
     }
+    async findByNama(nama) {
+        return this.kelasRepo.findOne({ where: { nama } });
+    }
+    async findAll() {
+        return this.kelasRepo.find();
+    }
 };
 exports.KelasService = KelasService;
 exports.KelasService = KelasService = __decorate([

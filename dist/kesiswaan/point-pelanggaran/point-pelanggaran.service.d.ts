@@ -16,7 +16,7 @@ export declare class PointPelanggaranService {
     findByCategory(category: string, tahun?: number): Promise<PointPelanggaran[]>;
     getCategories(): Promise<string[]>;
     findById(id: number): Promise<PointPelanggaran>;
-    findByKode(kode: number): Promise<PointPelanggaran>;
+    findByKode(kode: string): Promise<PointPelanggaran>;
     update(id: number, dto: UpdatePointPelanggaranDto): Promise<PointPelanggaran>;
     delete(id: number): Promise<void>;
     findSanksi(tahun?: number): Promise<PointPelanggaran[]>;
@@ -24,7 +24,7 @@ export declare class PointPelanggaranService {
     private deactivateOtherActiveYear;
     setActive(id: number): Promise<PointPelanggaran>;
     setInactive(id: number): Promise<PointPelanggaran>;
-    calculateTotalBobot(kodes: number[]): Promise<number>;
+    calculateTotalBobot(kodes: string[]): Promise<number>;
     getSummaryByYear(): Promise<Array<{
         tahun: number;
         totalPelanggaran: number;
@@ -45,6 +45,11 @@ export declare class PointPelanggaranService {
             error: string;
         }>;
         imported_data: PointPelanggaranImportData[];
+        debugLog?: {
+            pointsPerPage: {
+                [page: number]: number;
+            };
+            totalExtracted: number;
+        };
     }>;
-    private convertKodeToNumber;
 }

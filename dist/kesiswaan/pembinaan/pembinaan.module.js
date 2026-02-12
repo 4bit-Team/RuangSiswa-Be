@@ -15,6 +15,9 @@ const pembinaan_entity_1 = require("./entities/pembinaan.entity");
 const point_pelanggaran_entity_1 = require("../point-pelanggaran/entities/point-pelanggaran.entity");
 const notification_module_1 = require("../../notifications/notification.module");
 const walas_module_1 = require("../../walas/walas.module");
+const users_module_1 = require("../../users/users.module");
+const kelas_module_1 = require("../../kelas/kelas.module");
+const jurusan_module_1 = require("../../jurusan/jurusan.module");
 let PembinaanModule = class PembinaanModule {
 };
 exports.PembinaanModule = PembinaanModule;
@@ -24,6 +27,9 @@ exports.PembinaanModule = PembinaanModule = __decorate([
             typeorm_1.TypeOrmModule.forFeature([pembinaan_entity_1.Pembinaan, point_pelanggaran_entity_1.PointPelanggaran]),
             notification_module_1.NotificationModule,
             walas_module_1.WalasModule,
+            users_module_1.UsersModule,
+            kelas_module_1.KelasModule,
+            jurusan_module_1.JurusanModule,
         ],
         controllers: [pembinaan_controller_1.PembinaanController],
         providers: [pembinaan_service_1.PembinaanService],

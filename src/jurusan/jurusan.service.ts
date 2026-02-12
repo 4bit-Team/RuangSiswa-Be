@@ -13,4 +13,16 @@ export class JurusanService {
   async findOne(id: number) {
     return this.jurusanRepo.findOne({ where: { id } });
   }
+
+  async findByKode(kode: string) {
+    return this.jurusanRepo.findOne({ where: { kode } });
+  }
+
+  async findByNama(nama: string) {
+    return this.jurusanRepo.findOne({ where: { nama } });
+  }
+
+  async findAll() {
+    return this.jurusanRepo.find();
+  }
 }

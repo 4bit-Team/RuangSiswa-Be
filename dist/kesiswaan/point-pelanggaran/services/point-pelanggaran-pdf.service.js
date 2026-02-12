@@ -16,21 +16,19 @@ const pdfParse = async (buffer) => {
     const pdfParser = new PDFParse(uint8Array);
     console.log('=== PDF-PARSE DEBUG ===');
     console.log('PDFParse instance created');
-    console.log('PDFParse methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(pdfParser)));
     await pdfParser.load();
     console.log('PDF loaded successfully');
-    const text = await pdfParser.getText();
+    const textResult = await pdfParser.getText();
+    console.log('Text result type:', typeof textResult);
+    console.log('Text result is object?', typeof textResult === 'object');
+    const text = textResult?.text || '';
     console.log('Text extracted, length:', text?.length || 0);
-    console.log('Text type:', typeof text);
-    console.log('Text is array?', Array.isArray(text));
-    console.log('Text content sample:', JSON.stringify(text));
-    console.log('First 200 chars:', typeof text === 'string' ? text.substring(0, 200) : 'N/A (not a string)');
+    console.log('First 200 chars:', typeof text === 'string' ? text.substring(0, 200) : 'N/A');
     const info = await pdfParser.getInfo();
-    console.log('PDF info:', info);
-    console.log('Number of pages:', info?.pages || 0);
+    console.log('PDF info total:', info?.total);
     const result = {
         text,
-        numpages: info?.pages || 0,
+        numpages: info?.total || 0,
         info,
     };
     console.log('Returning result:', { numpages: result.numpages, textLength: result.text?.length });
@@ -53,15 +51,21 @@ let PointPelanggaranPdfService = PointPelanggaranPdfService_1 = class PointPelan
                 throw new common_1.BadRequestException('Tidak dapat menemukan tahun ajaran di halaman 1. Format yang diharapkan: "SMKN 1 Cbn-CabDin.Wil 1/2023"');
             }
             this.logger.log(`Extracted tahun_point: ${tahun_point}`);
-            const points = this.extractPointsData(text);
+            const pointsData = this.extractPointsData(text);
+            const points = pointsData.points;
+            const pointsPerPage = pointsData.pointsPerPage;
             if (points.length === 0) {
-                throw new common_1.BadRequestException('Tidak ada data poin pelanggaran yang berhasil diekstrak dari halaman 4-5');
+                throw new common_1.BadRequestException('Tidak ada data poin pelanggaran yang berhasil diekstrak dari halaman manapun');
             }
             this.logger.log(`Extracted ${points.length} points`);
             return {
                 tahun_point,
                 points,
                 validation: headerValidation,
+                debugLog: {
+                    pointsPerPage,
+                    totalExtracted: points.length,
+                },
             };
         }
         catch (error) {
@@ -107,70 +111,100 @@ let PointPelanggaranPdfService = PointPelanggaranPdfService_1 = class PointPelan
     }
     extractPointsData(text) {
         const points = [];
+        let pointsPerPage = {};
         try {
             const lines = text.split('\n').map((line) => line.trim());
-            const categories = {
-                keterlambatan: 'Keterlambatan',
-                kehadiran: 'Kehadiran',
-                pakaian: 'Pakaian',
-                kepribadian: 'Kepribadian',
-                ketertiban: 'Ketertiban',
-                kesehatan: 'Kesehatan',
-                keterampilan: 'Keterampilan',
+            console.log('=== EXTRACTING POINTS DATA ===');
+            console.log(`Total lines to process: ${lines.length}`);
+            const categoryMap = {
+                'A': 'Keterlambatan',
+                'B': 'Kehadiran',
+                'C': 'Pakaian',
+                'D': 'Kepribadian',
+                'E': 'Ketertiban',
+                'F': 'Merokok',
+                'G': 'Pornografi',
+                'H': 'Senjata Tajam',
+                'I': 'Narkoba',
+                'J': 'Berkelahi',
+                'K': 'Intimidasi',
             };
             let currentCategory = 'Umum';
-            let lineIndex = 0;
-            const codeMap = new Map();
-            let nextCodeNumber = 1;
-            for (lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+            let currentPage = 1;
+            let lastCategoryChangeAt = 0;
+            for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
                 const line = lines[lineIndex];
                 if (!line || line.length < 2)
                     continue;
-                for (const [key, value] of Object.entries(categories)) {
-                    if (line.toUpperCase().includes(key.toUpperCase())) {
-                        currentCategory = value;
-                        break;
-                    }
+                if (line.includes('DAFTAR KREDIT POIN PELANGGARAN') && lineIndex > 100) {
+                    currentPage++;
+                    console.log(`\n📄 Detected new page: Page ${currentPage}`);
+                    continue;
                 }
-                const codePattern = /^[A-Z](\.\d+)*/i;
-                const bobotPattern = /\d+(\+sanksi|\+do)?/i;
-                if (codePattern.test(line.split(/\s+/)[0] || '')) {
-                    try {
-                        const parts = line.split(/\s+\|\s+|\t+/);
-                        if (parts.length >= 2) {
-                            const kode = parts[0]?.trim();
-                            const jenis = parts[1]?.trim();
-                            const bobotStr = parts[2]?.trim();
-                            if (kode && jenis && bobotStr) {
-                                const bobot = this.parseBobotValue(bobotStr);
-                                const isSanksi = bobotStr.toLowerCase().includes('sanksi');
-                                const isDo = bobotStr.toLowerCase().includes('do');
-                                if (bobot > 0) {
-                                    const kodeNumber = this.convertKodeToNumber(kode, codeMap, nextCodeNumber);
-                                    nextCodeNumber = kodeNumber + 1;
-                                    points.push({
-                                        kode,
-                                        jenis_pelanggaran: jenis,
-                                        category_point: currentCategory,
-                                        bobot,
-                                        sanksi: isSanksi ? 'Ya' : undefined,
-                                        deskripsi: `Pelanggaran: ${jenis}`,
-                                    });
-                                    this.logger.debug(`Extracted: ${kode} | ${jenis} | ${bobot} (${currentCategory})`);
-                                }
-                            }
-                        }
+                const categoryHeaderMatch = line.match(/^([A-K])\.\s*([A-Z\/\-\s]+)$/);
+                if (categoryHeaderMatch) {
+                    const catKey = categoryHeaderMatch[1];
+                    currentCategory = categoryMap[catKey] || 'Umum';
+                    lastCategoryChangeAt = lineIndex;
+                    console.log(`✓ Page ${currentPage} | Found category: ${categoryHeaderMatch[0]} => ${currentCategory}`);
+                    continue;
+                }
+                const hasCategoryCode = /[A-K]\.\d+(?:\.\d+)*/g.test(line);
+                if (hasCategoryCode) {
+                    const codeMatch = line.match(/([A-K]\.\d+(?:\.\d+)*)/);
+                    if (!codeMatch)
+                        continue;
+                    const kode = codeMatch[1];
+                    const bobotMatch = line.match(/\s([\d]+)(?:\s*\+\s*([a-z&\s()]+))?(?:\s*\([^)]*\))?$/i);
+                    if (!bobotMatch) {
+                        continue;
                     }
-                    catch (e) {
-                        this.logger.warn(`Error parsing line: ${line}`);
+                    const bobotStr = (bobotMatch[1] ?? '0');
+                    const flagStr = line.substring(bobotMatch.index ?? 0).toLowerCase();
+                    const bobot = parseInt(bobotStr, 10);
+                    let jenis = line;
+                    jenis = jenis.replace(/^(?:\d+(?:\.\d+)*\.?\s+)/, '');
+                    jenis = jenis.replace(/\s+[A-K]\.\d+(?:\.\d+)*.*$/, '');
+                    jenis = jenis.trim();
+                    if (jenis && bobot > 0) {
+                        const isSanksi = flagStr.includes('sanksi');
+                        const isDo = flagStr.includes('do');
+                        let sanksiValue = undefined;
+                        if (isDo) {
+                            sanksiValue = 'DO';
+                        }
+                        else if (isSanksi) {
+                            sanksiValue = 'Sanksi';
+                        }
+                        points.push({
+                            kode,
+                            jenis_pelanggaran: jenis,
+                            category_point: currentCategory,
+                            bobot,
+                            sanksi: sanksiValue,
+                            deskripsi: `${currentCategory}: ${jenis}`,
+                        });
+                        if (!pointsPerPage[currentPage]) {
+                            pointsPerPage[currentPage] = 0;
+                        }
+                        pointsPerPage[currentPage]++;
+                        const flagInfo = sanksiValue ? `| sanksi=${sanksiValue}` : '';
+                        console.log(`✅ Page ${currentPage} | Extracted: ${kode} | ${jenis} | ${bobot} ${flagInfo} (${currentCategory})`);
+                        this.logger.debug(`Page ${currentPage} | Extracted: ${kode} | ${jenis} | ${bobot} (${currentCategory})`);
                     }
                 }
             }
-            return points;
+            console.log('\n=== EXTRACTION SUMMARY ===');
+            console.log(`Total points extracted: ${points.length}`);
+            console.log('Points per page:');
+            Object.keys(pointsPerPage).forEach((page) => {
+                console.log(`  Page ${page}: ${pointsPerPage[parseInt(page)]} points`);
+            });
+            return { points, pointsPerPage };
         }
         catch (error) {
             this.logger.error(`Error extracting points data: ${error.message}`);
-            return [];
+            return { points, pointsPerPage };
         }
     }
     parseBobotValue(bobotStr) {
@@ -181,12 +215,6 @@ let PointPelanggaranPdfService = PointPelanggaranPdfService_1 = class PointPelan
         catch (error) {
             return 0;
         }
-    }
-    convertKodeToNumber(kode, codeMap, nextNumber) {
-        if (!codeMap.has(kode)) {
-            codeMap.set(kode, nextNumber);
-        }
-        return codeMap.get(kode) || nextNumber;
     }
 };
 exports.PointPelanggaranPdfService = PointPelanggaranPdfService;

@@ -31,6 +31,8 @@ import { NewsCategoryModule } from './news-category/news-category.module';
 import { PointPelanggaranModule } from './kesiswaan/point-pelanggaran/point-pelanggaran.module';
 import { PembinaanModule } from './kesiswaan/pembinaan/pembinaan.module';
 import { PembinaanWakaModule } from './kesiswaan/pembinaan-waka/pembinaan-waka.module';
+import { PembinaanRinganModule } from './kesiswaan/pembinaan-ringan/pembinaan-ringan.module';
+import { PembinaanOrtuModule } from './kesiswaan/pembinaan-ortu/pembinaan-ortu.module';
 import { WalasModule } from './walas/walas.module';
 import { NotificationModule } from './notifications/notification.module';
 import * as fs from 'fs';
@@ -111,6 +113,8 @@ import * as path from 'path';
     PointPelanggaranModule,
     PembinaanModule,
     PembinaanWakaModule,
+    PembinaanRinganModule,
+    PembinaanOrtuModule,
     LaporanBkModule,
 
     // External Integration Modules

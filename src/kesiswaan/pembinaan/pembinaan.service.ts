@@ -7,6 +7,10 @@ import { SyncPembinaanDto } from './dto/sync-pembinaan.dto';
 import { UpdatePembinaanDto } from './dto/update-pembinaan.dto';
 import { WalasApiClient } from '../../walas/walas-api.client';
 import { NotificationService } from '../../notifications/notification.service';
+import { UsersService } from '../../users/users.service';
+import { KelasService } from '../../kelas/kelas.service';
+import { JurusanService } from '../../jurusan/jurusan.service';
+import * as bcrypt from 'bcrypt';
 
 // Type for pelanggaran data from WALASU API
 interface WalasPelanggaran {
@@ -35,6 +39,9 @@ export class PembinaanService {
     private pointPelanggaranRepository: Repository<PointPelanggaran>,
 
     private walasApiClient: WalasApiClient,
+    private usersService: UsersService,
+    private kelasService: KelasService,
+    private jurusanService: JurusanService,
     @Optional()
     @Inject(forwardRef(() => NotificationService))
     private notificationService?: NotificationService,
@@ -157,6 +164,16 @@ export class PembinaanService {
           await this.syncFromWalas(syncDto);
           result.synced++;
           this.logger.log(`✅ Pembinaan synced successfully for student ${syncDto.siswas_id}`);
+
+          // Auto-create user for siswa if not exists
+          try {
+            const siswasName = syncDto.siswas_name || `Siswa ${syncDto.siswas_id}`;
+            const className = syncDto.class_name || '';
+            await this.createOrUpdateStudentUser(syncDto.siswas_id, siswasName, className);
+          } catch (userError) {
+            this.logger.warn(`Could not create/update user for student ${syncDto.siswas_id}: ${userError.message}`);
+            // Don't fail sync if user creation fails
+          }
         } catch (itemError) {
           this.logger.error(`Error syncing pelanggaran ID ${pelanggaran.id}: ${itemError.message}`);
           result.errors.push({
@@ -591,6 +608,117 @@ export class PembinaanService {
    */
   async getUnmatched(): Promise<Pembinaan[]> {
     return this.pembinaanRepository.find({
+      where: { match_type: 'none' },
+      relations: ['pointPelanggaran'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Create or update student user automatically
+   * Called during sync to ensure every student has a user account
+   * Parses class_name to extract kelas and jurusan information
+   */
+  private async createOrUpdateStudentUser(
+    siswasId: number,
+    siswasName: string,
+    className: string,
+  ): Promise<void> {
+    try {
+      // Generate username from siswas_name and email
+      const username = siswasName.replace(/\s+/g, '_').toLowerCase();
+      const email = `siswa.${siswasId}@ruangsiswa`;
+
+      // Check if user already exists by email or username
+      const existingUser = await this.usersService.findOneByEmail(email);
+
+      if (existingUser) {
+        this.logger.debug(`User already exists for student ${siswasId}, skipping creation`);
+        return;
+      }
+
+      // Parse className to extract kelas and jurusan
+      // Format: "X SIJA 1" -> kelas: "X", jurusan: "SIJA"
+      const { kelasNama, jurusanKode } = this.parseClassName(className);
+
+      let kelasId: number | undefined;
+      let jurusanId: number | undefined;
+
+      // Lookup kelas_id
+      if (kelasNama) {
+        const kelas = await this.kelasService.findByNama(kelasNama);
+        if (kelas) {
+          kelasId = kelas.id;
+          this.logger.debug(`Found kelas: ${kelasNama} (ID: ${kelasId})`);
+        } else {
+          this.logger.warn(`Kelas not found for nama: ${kelasNama}`);
+        }
+      }
+
+      // Lookup jurusan_id
+      if (jurusanKode) {
+        const jurusan = await this.jurusanService.findByKode(jurusanKode);
+        if (jurusan) {
+          jurusanId = jurusan.id;
+          this.logger.debug(`Found jurusan: ${jurusanKode} (ID: ${jurusanId})`);
+        } else {
+          this.logger.warn(`Jurusan not found for kode: ${jurusanKode}`);
+        }
+      }
+
+      // Hash the default password
+      const defaultPassword = 'ruangsiswa123';
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+      // Create new user for siswa
+      await this.usersService.create({
+        username,
+        email,
+        password: hashedPassword,
+        fullName: siswasName,
+        role: 'siswa',
+        status: 'aktif',
+        kelas_lengkap: className, // Full class name from WALAS (e.g., "X SIJA 1")
+        kelas_id: kelasId,
+        jurusan_id: jurusanId,
+      });
+
+      this.logger.log(
+        `✅ User created successfully for student ${siswasId} (${siswasName}) | ` +
+          `Kelas: ${kelasId || 'N/A'} | Jurusan: ${jurusanId || 'N/A'}`,
+      );
+    } catch (error) {
+      this.logger.error(`Error creating user for student ${siswasId}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse className to extract kelas name and jurusan kode
+   * Input format: "X SIJA 1" or "XI SIJA 2" or "XII AKL 1"
+   * Returns: { kelasNama: "X", jurusanKode: "SIJA" }
+   */
+  private parseClassName(className: string): { kelasNama: string | null; jurusanKode: string | null } {
+    if (!className || typeof className !== 'string') {
+      return { kelasNama: null, jurusanKode: null };
+    }
+
+    const parts = className.trim().split(/\s+/);
+
+    // First part should be kelas (X, XI, XII)
+    const kelasNama = parts[0] || null;
+
+    // Second part should be jurusan kode (SIJA, AKL, BKP, etc)
+    const jurusanKode = parts[1] || null;
+
+    return {
+      kelasNama: kelasNama === 'X' || kelasNama === 'XI' || kelasNama === 'XII' ? kelasNama : null,
+      jurusanKode,
+    };
+  }
+
+  /**
+   * eturn this.pembinaanRepository.find({
       where: { match_type: 'none' },
       relations: ['pointPelanggaran'],
       order: { createdAt: 'DESC' },

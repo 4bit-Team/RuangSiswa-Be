@@ -38,8 +38,9 @@ __decorate([
     __metadata("design:type", String)
 ], CreatePointPelanggaranDto.prototype, "nama_pelanggaran", void 0);
 __decorate([
-    (0, class_validator_1.IsInt)(),
-    __metadata("design:type", Number)
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Length)(1, 50),
+    __metadata("design:type", String)
 ], CreatePointPelanggaranDto.prototype, "kode", void 0);
 __decorate([
     (0, class_validator_1.IsInt)(),

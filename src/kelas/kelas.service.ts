@@ -13,4 +13,12 @@ export class KelasService {
   async findOne(id: number) {
     return this.kelasRepo.findOne({ where: { id } });
   }
+
+  async findByNama(nama: string) {
+    return this.kelasRepo.findOne({ where: { nama } });
+  }
+
+  async findAll() {
+    return this.kelasRepo.find();
+  }
 }

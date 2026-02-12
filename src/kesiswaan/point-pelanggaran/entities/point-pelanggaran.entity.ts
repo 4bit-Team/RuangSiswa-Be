@@ -29,8 +29,8 @@ export class PointPelanggaran {
   @Column({ type: 'varchar', length: 255 })
   nama_pelanggaran: string; // Nama/deskripsi pelanggaran (e.g., "Terlambat datang", "Membolos", "Merokok")
 
-  @Column({ type: 'int', unique: true })
-  kode: number; // Kode unik pelanggaran (e.g., 1, 2, 3, etc.)
+  @Column({ type: 'varchar', length: 50, unique: true })
+  kode: string; // Kode unik pelanggaran dari PDF (e.g., "A.1", "D.10.5", "K.2")
 
   @Column({ type: 'int' })
   bobot: number; // Bobot poin untuk pelanggaran ini (e.g., 5, 10, 25, 50)
