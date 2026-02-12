@@ -11,5 +11,5 @@ export class CreateUserDto {
   isVerified?: boolean;
   kelas_id?: number;
   jurusan_id?: number;
+  student_id?: number; // For orang_tua role: identifies which student this parent belongs to
 }
-

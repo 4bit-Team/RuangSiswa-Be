@@ -37,6 +37,19 @@ export class UsersService {
     });
   }
 
+  async findByRoleAndStudentId(role: string, studentId: number) {
+    if (!role) {
+      return [];
+    }
+    return this.userRepo.find({
+      where: {
+        role: role.toLowerCase() as any,
+        student_id: studentId,
+      },
+      select: ['id', 'fullName', 'email', 'phone_number', 'role', 'student_id'],
+    });
+  }
+
   findOne(id: number) {
     return this.userRepo.findOne({ where: { id } });
   }

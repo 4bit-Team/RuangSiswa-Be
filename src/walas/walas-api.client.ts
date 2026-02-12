@@ -204,6 +204,77 @@ export class WalasApiClient {
     }
   }
 
+  /**
+   * Get student biodata with parent information
+   * GET /api/v1/walas/students/{studentId}
+   * Or fallback to direct /get-siswa/{id} endpoint
+   */
+  async getStudentBiodata(studentId: number) {
+    try {
+      // Try API v1 endpoint first
+      let url = this.buildUrl(`/api/v1/walas/students/${studentId}`);
+      let response = await firstValueFrom(
+        this.httpService.get(url, { headers: this.getHeaders(), validateStatus: () => true })
+      );
+
+      // If v1 endpoint not found, try fallback endpoint
+      if (response.status === 404) {
+        console.warn(`API v1 students endpoint not found, trying fallback /get-siswa endpoint`);
+        url = this.buildUrl(`/get-siswa/${studentId}`);
+        response = await firstValueFrom(
+          this.httpService.get(url, { headers: this.getHeaders() })
+        );
+      }
+
+      return response.data?.data || response.data;
+    } catch (error) {
+      console.warn(`Could not fetch student biodata for ${studentId}: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Get parent data (from biodata) for a student
+   * As fallback if parent_data not included in pelanggaran response
+   * Sends request directly to Walas API to fetch siswa with biodata
+   * Tries multiple sources: student endpoint, pelanggaran list, get-siswa endpoint
+   */
+  async getStudentParentData(studentId: number) {
+    try {
+      // Try to get from student endpoint first
+      let student = await this.getStudentBiodata(studentId);
+      if (student?.biodata) {
+        console.log(`✅ Found biodata from student endpoint for student ${studentId}`);
+        return student.biodata;
+      }
+      if (student?.nama_ayah || student?.nama_ibu) {
+        console.log(`✅ Found parent data directly in student for student ${studentId}`);
+        return student; // biodata columns directly in siswa record
+      }
+
+      // Fallback: try to fetch from pelanggaran list for this student
+      console.warn(`Biodata not found in student endpoint, trying pelanggaran list...`);
+      const pelanggaranList = await this.getPelanggaranByStudent(studentId, 1);
+      if (Array.isArray(pelanggaranList) && pelanggaranList.length > 0) {
+        const pelanggaran = pelanggaranList[0];
+        if (pelanggaran?.parent_data) {
+          console.log(`✅ Found parent_data in pelanggaran for student ${studentId}`);
+          return pelanggaran.parent_data;
+        }
+        if (pelanggaran?.siswa?.biodata) {
+          console.log(`✅ Found biodata in pelanggaran.siswa for student ${studentId}`);
+          return pelanggaran.siswa.biodata;
+        }
+      }
+
+      console.warn(`No parent data found for student ${studentId}`);
+      return null;
+    } catch (error) {
+      console.warn(`Error fetching parent data for student ${studentId}: ${error.message}`);
+      return null;
+    }
+  }
+
   // Health check method
   async healthCheck(): Promise<boolean> {
     try {

@@ -22,14 +22,26 @@ export class NotificationService {
    */
   async create(createNotificationDto: CreateNotificationDto): Promise<Notification> {
     try {
+      // Validate recipient_id
+      if (!createNotificationDto.recipient_id) {
+        throw new Error('recipient_id is required');
+      }
+
       const notification = this.notificationRepository.create(createNotificationDto);
       const savedNotification = await this.notificationRepository.save(notification);
 
-      // Broadcast via WebSocket
-      this.notificationGateway.sendNotificationToUser(
-        createNotificationDto.recipient_id,
-        savedNotification,
-      );
+      // Broadcast via WebSocket (non-blocking)
+      try {
+        this.notificationGateway.sendNotificationToUser(
+          createNotificationDto.recipient_id,
+          savedNotification,
+        );
+      } catch (wsError) {
+        this.logger.warn(
+          `Failed to broadcast notification via WebSocket: ${wsError.message}`,
+        );
+        // Continue anyway - notification is saved in DB
+      }
 
       this.logger.log(
         `Notification created for user ${createNotificationDto.recipient_id}: ${createNotificationDto.title}`,
@@ -47,19 +59,36 @@ export class NotificationService {
    */
   async createMultiple(notifications: CreateNotificationDto[]): Promise<Notification[]> {
     try {
+      if (!notifications || notifications.length === 0) {
+        return [];
+      }
+
       const savedNotifications = await this.notificationRepository.save(
         notifications.map((dto) => this.notificationRepository.create(dto)),
       );
 
-      // Broadcast each notification
+      // Broadcast each notification (non-blocking)
+      let broadcastCount = 0;
+      let broadcastErrors = 0;
+      
       savedNotifications.forEach((notification) => {
-        this.notificationGateway.sendNotificationToUser(
-          notification.recipient_id,
-          notification,
-        );
+        try {
+          this.notificationGateway.sendNotificationToUser(
+            notification.recipient_id,
+            notification,
+          );
+          broadcastCount++;
+        } catch (wsError) {
+          broadcastErrors++;
+          this.logger.warn(
+            `Failed to broadcast notification to user ${notification.recipient_id}: ${wsError.message}`,
+          );
+        }
       });
 
-      this.logger.log(`${savedNotifications.length} notifications created and broadcasted`);
+      this.logger.log(
+        `${savedNotifications.length} notifications created (${broadcastCount} broadcasted, ${broadcastErrors} broadcast errors)`,
+      );
 
       return savedNotifications;
     } catch (error) {

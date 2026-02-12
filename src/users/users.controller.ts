@@ -23,6 +23,17 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('by-role/:role')
+  findByRole(
+    @Param('role') role: string,
+    @Query('student_id') student_id?: string,
+  ) {
+    if (student_id) {
+      return this.usersService.findByRoleAndStudentId(role, parseInt(student_id));
+    }
+    return this.usersService.findByRole(role);
+  }
+
   @Get('count')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')

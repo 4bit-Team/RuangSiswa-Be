@@ -33,6 +33,9 @@ export class User {
   @Column({ type: 'enum', enum: ['aktif', 'nonaktif'], default: 'aktif' })
   status: UserStatus;
 
+  @Column({ type: 'int', nullable: true })
+  student_id: number;
+
   @Column({ type: 'varchar', nullable: true })
   specialty: string;
 

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, ILike } from 'typeorm';
 import { Pembinaan } from './entities/pembinaan.entity';
 import { PointPelanggaran } from '../point-pelanggaran/entities/point-pelanggaran.entity';
+import { User } from '../../users/entities/user.entity';
 import { SyncPembinaanDto } from './dto/sync-pembinaan.dto';
 import { UpdatePembinaanDto } from './dto/update-pembinaan.dto';
 import { WalasApiClient } from '../../walas/walas-api.client';
@@ -25,6 +26,18 @@ interface WalasPelanggaran {
   tanggal_pembinaan?: string;
   class_id?: number;
   class_name?: string;
+  parent_data?: {
+    ayah?: {
+      nama_ayah?: string;
+      no_wa_ayah?: string;
+      siswas_id: number;
+    };
+    ibu?: {
+      nama_ibu?: string;
+      no_wa_ibu?: string;
+      siswas_id: number;
+    };
+  };
 }
 
 @Injectable()
@@ -166,13 +179,66 @@ export class PembinaanService {
           this.logger.log(`✅ Pembinaan synced successfully for student ${syncDto.siswas_id}`);
 
           // Auto-create user for siswa if not exists
+          let studentUserId: number | undefined;
           try {
             const siswasName = syncDto.siswas_name || `Siswa ${syncDto.siswas_id}`;
             const className = syncDto.class_name || '';
-            await this.createOrUpdateStudentUser(syncDto.siswas_id, siswasName, className);
+            const studentUser = await this.createOrUpdateStudentUser(syncDto.siswas_id, siswasName, className);
+            studentUserId = studentUser?.id;
+            this.logger.log(`✅ Student user created/found with ID: ${studentUserId}`);
           } catch (userError) {
-            this.logger.warn(`Could not create/update user for student ${syncDto.siswas_id}: ${userError.message}`);
+            this.logger.warn(`❌ Could not create/update user for student ${syncDto.siswas_id}: ${userError.message}`);
             // Don't fail sync if user creation fails
+          }
+
+          // Auto-create parent (orang_tua) users if parent data exists
+          // Jika parent_data tidak ada di response, fetch dari WALASU siswa endpoint
+          let parentData = pelanggaran.parent_data;
+          
+          if (!parentData && studentUserId) {
+            this.logger.log(`🔄 parent_data tidak ada di pelanggaran, fetch dari WALASU...`);
+            try {
+              const biodata = await this.walasApiClient.getStudentParentData(pelanggaran.siswas_id);
+              if (biodata) {
+                // Normalize biodata ke parent_data format
+                parentData = {
+                  ayah: biodata.ayah || {
+                    nama_ayah: biodata.nama_ayah,
+                    no_wa_ayah: biodata.no_wa_ayah,
+                  },
+                  ibu: biodata.ibu || {
+                    nama_ibu: biodata.nama_ibu,
+                    no_wa_ibu: biodata.no_wa_ibu,
+                  },
+                };
+                this.logger.log(`✅ Parent data fetched from WALASU: ${JSON.stringify(parentData)}`);
+              }
+            } catch (bioError) {
+              this.logger.warn(`Could not fetch parent data from WALASU: ${bioError.message}`);
+            }
+          }
+          
+          this.logger.log(`📋 Final parent data check: ${JSON.stringify(parentData)}`);
+          this.logger.log(`📋 Has ayah: ${!!parentData?.ayah?.nama_ayah}, Has ibu: ${!!parentData?.ibu?.nama_ibu}`);
+          this.logger.log(`📋 StudentUserId: ${studentUserId}`);
+          
+          if (studentUserId && (parentData?.ayah?.nama_ayah || parentData?.ibu?.nama_ibu)) {
+            try {
+              const parentDataFormatted = {
+                nama_ayah: parentData?.ayah?.nama_ayah,
+                no_wa_ayah: parentData?.ayah?.no_wa_ayah,
+                nama_ibu: parentData?.ibu?.nama_ibu,
+                no_wa_ibu: parentData?.ibu?.no_wa_ibu,
+              };
+              this.logger.log(`🔧 Creating parent users with data: ${JSON.stringify(parentDataFormatted)}`);
+              const parentResult = await this.createOrUpdateParentUsers(studentUserId, syncDto.siswas_id, syncDto.siswas_name || 'Unknown', parentDataFormatted);
+              this.logger.log(`✅ Parent users created: Ayah=${parentResult.ayahUserId}, Ibu=${parentResult.ibuUserId}`);
+            } catch (parentError) {
+              this.logger.error(`❌ Could not create/update parent users for student ${syncDto.siswas_id}: ${parentError.message}`);
+              // Don't fail sync if parent user creation fails
+            }
+          } else {
+            this.logger.log(`⚠️ Skipping parent user creation: studentUserId=${studentUserId}, hasAyah=${!!parentData?.ayah?.nama_ayah}, hasIbu=${!!parentData?.ibu?.nama_ibu}`);
           }
         } catch (itemError) {
           this.logger.error(`Error syncing pelanggaran ID ${pelanggaran.id}: ${itemError.message}`);
@@ -623,7 +689,7 @@ export class PembinaanService {
     siswasId: number,
     siswasName: string,
     className: string,
-  ): Promise<void> {
+  ): Promise<User | undefined> {
     try {
       // Generate username from siswas_name and email
       const username = siswasName.replace(/\s+/g, '_').toLowerCase();
@@ -634,7 +700,7 @@ export class PembinaanService {
 
       if (existingUser) {
         this.logger.debug(`User already exists for student ${siswasId}, skipping creation`);
-        return;
+        return existingUser;
       }
 
       // Parse className to extract kelas and jurusan
@@ -671,7 +737,7 @@ export class PembinaanService {
       const hashedPassword = await bcrypt.hash(defaultPassword, 10);
 
       // Create new user for siswa
-      await this.usersService.create({
+      const newUser = await this.usersService.create({
         username,
         email,
         password: hashedPassword,
@@ -687,6 +753,8 @@ export class PembinaanService {
         `✅ User created successfully for student ${siswasId} (${siswasName}) | ` +
           `Kelas: ${kelasId || 'N/A'} | Jurusan: ${jurusanId || 'N/A'}`,
       );
+
+      return newUser;
     } catch (error) {
       this.logger.error(`Error creating user for student ${siswasId}: ${error.message}`);
       throw error;
@@ -773,4 +841,103 @@ export class PembinaanService {
       .orderBy('p.tanggal_pembinaan', 'DESC')
       .getMany();
   }
+
+  /**
+   * Create or update parent (orang_tua) users for a student
+   * Automatically creates Ayah (Father) and Ibu (Mother) users with role orang_tua
+   * Used during pembinaan sync from WALASU
+   */
+  async createOrUpdateParentUsers(
+    studentUserId: number,
+    siswasId: number,
+    siswasName: string,
+    parentData: {
+      nama_ayah?: string;
+      no_wa_ayah?: string;
+      nama_ibu?: string;
+      no_wa_ibu?: string;
+    },
+  ): Promise<{ ayahUserId?: number; ibuUserId?: number }> {
+    try {
+      const result = {} as { ayahUserId?: number; ibuUserId?: number };
+
+      // Hash the default password for parents
+      const defaultPassword = 'ruangsiswa123';
+      const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+
+      // Create Ayah (Father) user
+      if (parentData.nama_ayah) {
+        try {
+          const ayahUsername = parentData.nama_ayah.replace(/\s+/g, '_').toLowerCase();
+          const ayahEmail = `${siswasId}-ayah@ruangsiswa`;
+
+          const existingAyah = await this.usersService.findOneByEmail(ayahEmail);
+
+          if (!existingAyah) {
+            const ayahUser = await this.usersService.create({
+              username: ayahUsername,
+              email: ayahEmail,
+              password: hashedPassword,
+              fullName: parentData.nama_ayah,
+              role: 'orang_tua',
+              status: 'aktif',
+              phone_number: parentData.no_wa_ayah || undefined,
+              student_id: studentUserId,
+            });
+
+            result.ayahUserId = ayahUser.id;
+            this.logger.log(
+              `✅ Ayah user created for student ${siswasId}: ${parentData.nama_ayah} (ID: ${ayahUser.id})`
+            );
+          } else {
+            result.ayahUserId = existingAyah.id;
+            this.logger.debug(`Ayah user already exists for student ${siswasId}: ${ayahEmail}`);
+          }
+        } catch (error) {
+          this.logger.warn(`Could not create Ayah user for student ${siswasId}: ${error.message}`);
+          // Continue with Ibu creation even if Ayah fails
+        }
+      }
+
+      // Create Ibu (Mother) user
+      if (parentData.nama_ibu) {
+        try {
+          const ibuUsername = parentData.nama_ibu.replace(/\s+/g, '_').toLowerCase();
+          const ibuEmail = `${siswasId}-ibu@ruangsiswa`;
+
+          const existingIbu = await this.usersService.findOneByEmail(ibuEmail);
+
+          if (!existingIbu) {
+            const ibuUser = await this.usersService.create({
+              username: ibuUsername,
+              email: ibuEmail,
+              password: hashedPassword,
+              fullName: parentData.nama_ibu,
+              role: 'orang_tua',
+              status: 'aktif',
+              phone_number: parentData.no_wa_ibu || undefined,
+              student_id: studentUserId,
+            });
+
+            result.ibuUserId = ibuUser.id;
+            this.logger.log(
+              `✅ Ibu user created for student ${siswasId}: ${parentData.nama_ibu} (ID: ${ibuUser.id})`
+            );
+          } else {
+            result.ibuUserId = existingIbu.id;
+            this.logger.debug(`Ibu user already exists for student ${siswasId}: ${ibuEmail}`);
+          }
+        } catch (error) {
+          this.logger.warn(`Could not create Ibu user for student ${siswasId}: ${error.message}`);
+          // Continue even if Ibu creation fails
+        }
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error(`Error creating parent users for student ${siswasId}: ${error.message}`);
+      throw error;
+    }
+  }
 }
+
