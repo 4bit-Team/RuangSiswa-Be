@@ -21,7 +21,7 @@ export class KehadiranService {
     try {
       console.log(`[Kehadiran] Syncing from Walas: ${startDate} to ${endDate}`);
 
-      const walasUrl = `${this.walasApiBase}/walas/kehadiran`;
+      const walasUrl = `${this.walasApiBase}/v1/walas/kehadiran`;
       const response = await axios.get(walasUrl, {
         params: {
           start_date: startDate,
