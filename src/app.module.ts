@@ -33,6 +33,8 @@ import { PembinaanModule } from './kesiswaan/pembinaan/pembinaan.module';
 import { PembinaanWakaModule } from './kesiswaan/pembinaan-waka/pembinaan-waka.module';
 import { PembinaanRinganModule } from './kesiswaan/pembinaan-ringan/pembinaan-ringan.module';
 import { PembinaanOrtuModule } from './kesiswaan/pembinaan-ortu/pembinaan-ortu.module';
+import { KehadiranModule } from './kesiswaan/kehadiran/kehadiran.module';
+import { KeterlambatanModule } from './kesiswaan/keterlambatan/keterlambatan.module';
 import { WalasModule } from './walas/walas.module';
 import { NotificationModule } from './notifications/notification.module';
 import * as fs from 'fs';
@@ -115,6 +117,8 @@ import * as path from 'path';
     PembinaanWakaModule,
     PembinaanRinganModule,
     PembinaanOrtuModule,
+    KehadiranModule,
+    KeterlambatanModule,
     LaporanBkModule,
 
     // External Integration Modules
